@@ -5,7 +5,7 @@ Vector::Vector(const std::vector<int>& values) : canonized(values.size()) {
     canonize();
 }
 
-Vector::Vector(int dimension, int index) : values(dimension, 0), canonized(dimension, 0) {
+Vector::Vector(size_t dimension, size_t index) : values(dimension, 0), canonized(dimension, 0) {
     values[index] = 1;
     canonized[index] = 1;
 }
@@ -46,7 +46,7 @@ Vector Vector::operator*(int scale) const {
     return Vector(result);
 }
 
-int Vector::operator[](int index) const {
+int Vector::operator[](size_t index) const {
     return values[index];
 }
 
@@ -85,12 +85,12 @@ int Vector::compare(const Vector& vector) const {
     return 0;
 }
 
-int Vector::getDimension() const {
-    return (int) values.size();
+size_t Vector::getDimension() const {
+    return values.size();
 }
 
-int Vector::getSupport() const {
-    int support = 0;
+size_t Vector::getSupport() const {
+    size_t support = 0;
 
     for (int value : values)
         support += value != 0;
@@ -107,9 +107,9 @@ int Vector::getMaxAbs() const {
     return max;
 }
 
-int Vector::getHammingDistance(const Vector& vector) const {
-    int distance = 0;
-    int inverse = 0;
+size_t Vector::getHammingDistance(const Vector& vector) const {
+    size_t distance = 0;
+    size_t inverse = 0;
 
     for (size_t i = 0; i < values.size(); i++) {
         if (values[i] != vector.values[i])
@@ -122,13 +122,19 @@ int Vector::getHammingDistance(const Vector& vector) const {
     return std::min(distance, inverse);
 }
 
-int Vector::getMatchesCount(const Vector& vector) const {
-    int matches = 0;
+size_t Vector::getMatchesCount(const Vector& vector) const {
+    size_t matches = 0;
+    size_t inverse = 0;
 
-    for (size_t i = 0; i < values.size(); i++)
-        matches += values[i] != 0 && values[i] == vector.values[i];
+    for (size_t i = 0; i < values.size(); i++) {
+        if (values[i] == 0)
+            continue;
 
-    return matches;
+        matches += values[i] == vector.values[i];
+        inverse += values[i] == -vector.values[i];
+    }
+
+    return std::max(matches, inverse);
 }
 
 void Vector::canonize() {

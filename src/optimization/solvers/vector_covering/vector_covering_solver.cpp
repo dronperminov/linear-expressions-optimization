@@ -2,7 +2,6 @@
 
 VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector &selector) {
     this->dimension = expressions[0].size();
-    this->count = expressions.size();
 
     setParameters(parameters);
     setScorer(scorer);
@@ -26,7 +25,7 @@ void VectorCoveringSolver::setSelector(const ScoreSelector &selector) {
     this->selector = &selector;
 }
 
-int VectorCoveringSolver::solve() {
+size_t VectorCoveringSolver::solve() {
     initialize();
 
     while (!uncovered.empty()) {
@@ -41,8 +40,20 @@ int VectorCoveringSolver::solve() {
 
 Solution VectorCoveringSolver::getSolution() const {
     Solution solution;
+    solution.dimension = dimension;
     solution.substitutions = steps;
-    solution.expressions = {}; // TODO
+
+    std::unordered_map<Vector, size_t> vector2index;
+    for (size_t i = 0; i < vectors.size(); i++)
+        vector2index[vectors[i]] = i;
+
+    for (size_t i = 0; i < expressions.size(); i++) {
+        Term term;
+        term.index = vector2index[expressions[i]];
+        term.value = vectors[term.index].compare(expressions[i]);
+        solution.expressions.push_back({term});
+    }
+
     return solution;
 }
 
@@ -56,7 +67,7 @@ void VectorCoveringSolver::initialize() {
         if (target.getSupport() > 1)
             uncovered.insert(target);
 
-    for (int i = 0; i < dimension; i++) {
+    for (size_t i = 0; i < dimension; i++) {
         Vector basis(dimension, i);
         pool.insert(basis);
         vectors.push_back(basis);

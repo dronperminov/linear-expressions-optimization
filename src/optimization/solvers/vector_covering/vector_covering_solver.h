@@ -15,8 +15,7 @@
 #include "vector_covering_scorer.h"
 
 class VectorCoveringSolver {
-    int dimension;
-    int count;
+    size_t dimension;
     std::vector<Vector> expressions;
     VectorCoveringParameters parameters;
     const VectorCoveringScorer* scorer;
@@ -35,7 +34,7 @@ public:
     void setScorer(const VectorCoveringScorer& scorer);
     void setSelector(const ScoreSelector &selector);
 
-    int solve();
+    size_t solve();
     Solution getSolution() const;
 private:
     void initialize();

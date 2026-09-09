@@ -27,8 +27,8 @@ void VectorCoveringDefaultScorer::score(const std::vector<VectorCoveringCandidat
                 continue;
             }
 
-            int hamming = candidates[i].vector.getDimension() - candidates[i].vector.getHammingDistance(target);
-            int matches = candidates[i].vector.getMatchesCount(target);
+            size_t hamming = candidates[i].vector.getDimension() - candidates[i].vector.getHammingDistance(target);
+            size_t matches = candidates[i].vector.getMatchesCount(target);
 
             score += hamming * hammingWeight;
             score += matches * matchesWeight;
@@ -47,7 +47,7 @@ void VectorCoveringDefaultScorer::addOneStepScores(const std::vector<VectorCover
         vector2index[candidates[i].vector] = i;
 
     for (const Vector& target : context.uncovered) {
-        std::unordered_set<int> indices;
+        std::unordered_set<size_t> indices;
 
         for (const Vector& vector : context.vectors) {
             auto sub = vector2index.find(target - vector);
@@ -59,7 +59,7 @@ void VectorCoveringDefaultScorer::addOneStepScores(const std::vector<VectorCover
                 indices.insert(add->second);
         }
 
-        for (int index : indices)
+        for (size_t index : indices)
             scores[index] += oneStepWeight;
     }
 }
