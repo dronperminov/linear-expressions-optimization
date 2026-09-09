@@ -1,4 +1,4 @@
-#include "vector_covering_optimizer.h"
+#include "vector_covering_solver.h"
 
 VectorCoveringScorer::VectorCoveringScorer() {
     coverWeight = 1000.0;
@@ -14,31 +14,34 @@ VectorCoveringScorer::VectorCoveringScorer(double coverWeight, double oneStepWei
     this->matchesWeight = matchesWeight;
 }
 
-void VectorCoveringScorer::score(std::vector<Candidate>& candidates, const VectorCoveringContext& context) const {
-    for (Candidate& candidate : candidates) {
-        candidate.score = 0.0;
+void VectorCoveringScorer::score(const std::vector<Candidate>& candidates, const VectorCoveringContext& context, std::vector<double>& scores) const {
+    scores.resize(candidates.size());
+
+    for (size_t i = 0; i < candidates.size(); i++) {
+        double score = 0.0;
 
         for (const Vector& target : context.uncovered) {
-            if (candidate.vector.compare(target)) {
-                candidate.score += coverWeight;
+            if (candidates[i].vector.compare(target)) {
+                score += coverWeight;
                 continue;
             }
 
-            int hamming = candidate.vector.getDimension() - candidate.vector.getHammingDistance(target);
-            int matches = candidate.vector.getMatchesCount(target);
+            int hamming = candidates[i].vector.getDimension() - candidates[i].vector.getHammingDistance(target);
+            int matches = candidates[i].vector.getMatchesCount(target);
 
-            candidate.score += hamming * hammingWeight;
-            candidate.score += matches * matchesWeight;
+            score += hamming * hammingWeight;
+            score += matches * matchesWeight;
         }
+
+        scores[i] = score;
     }
 
     if (oneStepWeight != 0)
-        addOneStepScores(candidates, context);
+        addOneStepScores(candidates, context, scores);
 }
 
-void VectorCoveringScorer::addOneStepScores(std::vector<Candidate>& candidates, const VectorCoveringContext& context) const {
+void VectorCoveringScorer::addOneStepScores(const std::vector<Candidate>& candidates, const VectorCoveringContext& context, std::vector<double>& scores) const {
     std::unordered_map<Vector, size_t> vector2index;
-
     for (size_t i = 0; i < candidates.size(); i++)
         vector2index[candidates[i].vector] = i;
 
@@ -56,11 +59,11 @@ void VectorCoveringScorer::addOneStepScores(std::vector<Candidate>& candidates, 
         }
 
         for (int index : indices)
-            candidates[index].score += oneStepWeight;
+            scores[index] += oneStepWeight;
     }
 }
 
-VectorCoveringOptimizer::VectorCoveringOptimizer(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const CandidateSelector<Candidate> &selector) {
+VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector &selector) {
     this->dimension = expressions[0].size();
     this->count = expressions.size();
 
@@ -68,45 +71,45 @@ VectorCoveringOptimizer::VectorCoveringOptimizer(const std::vector<std::vector<i
     setScorer(scorer);
     setSelector(selector);
 
-    for (const std::vector<int> expression : expressions) {
+    for (const std::vector<int>& expression : expressions) {
         this->expressions.push_back(Vector(expression));
         this->targets.insert(Vector(expression));
     }
 }
 
-void VectorCoveringOptimizer::setParameters(const VectorCoveringParameters& parameters) {
+void VectorCoveringSolver::setParameters(const VectorCoveringParameters& parameters) {
     this->parameters = parameters;
 }
 
-void VectorCoveringOptimizer::setScorer(const VectorCoveringScorer& scorer) {
+void VectorCoveringSolver::setScorer(const VectorCoveringScorer& scorer) {
     this->scorer = scorer;
 }
 
-void VectorCoveringOptimizer::setSelector(const CandidateSelector<Candidate> &selector) {
+void VectorCoveringSolver::setSelector(const ScoreSelector &selector) {
     this->selector = &selector;
 }
 
-int VectorCoveringOptimizer::optimize() {
+int VectorCoveringSolver::solve() {
     initialize();
 
     while (!uncovered.empty()) {
         std::vector<Candidate> candidates = getCandidates();
-        scorer.score(candidates, {uncovered, vectors});
-        Candidate candidate = selector->select(candidates);
+        scorer.score(candidates, {uncovered, vectors}, scores);
+        Candidate candidate = candidates[selector->selectIndex(scores)];
         addCandidate(candidate);
     }
 
     return steps.size();
 }
 
-Solution VectorCoveringOptimizer::getSolution() const {
+Solution VectorCoveringSolver::getSolution() const {
     Solution solution;
     solution.substitutions = steps;
     solution.expressions = {}; // TODO
     return solution;
 }
 
-void VectorCoveringOptimizer::initialize() {
+void VectorCoveringSolver::initialize() {
     uncovered.clear();
     pool.clear();
     vectors.clear();
@@ -123,15 +126,15 @@ void VectorCoveringOptimizer::initialize() {
     }
 }
 
-std::vector<Candidate> VectorCoveringOptimizer::getCandidates() const {
+std::vector<Candidate> VectorCoveringSolver::getCandidates() const {
     std::vector<Candidate> candidates;
     std::unordered_set<Vector> unique;
 
     for (size_t i = 0; i < vectors.size(); i++) {
         for (size_t j = i + 1; j < vectors.size(); j++) {
             std::vector<Candidate> vs = {
-                {{i, j, 1, 1}, vectors[i] + vectors[j], 0.0},
-                {{i, j, 1, -1}, vectors[i] - vectors[j], 0.0}
+                {{i, j, 1, 1}, vectors[i] + vectors[j]},
+                {{i, j, 1, -1}, vectors[i] - vectors[j]}
             };
 
             for (const Candidate& candidate : vs) {
@@ -153,7 +156,7 @@ std::vector<Candidate> VectorCoveringOptimizer::getCandidates() const {
     return candidates;
 }
 
-void VectorCoveringOptimizer::addCandidate(const Candidate& candidate) {
+void VectorCoveringSolver::addCandidate(const Candidate& candidate) {
     pool.insert(candidate.vector);
     vectors.push_back(candidate.vector);
     steps.push_back(candidate.step);

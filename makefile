@@ -1,9 +1,16 @@
 CXX = g++
 FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp
-ENTITIES = src/entities/vector.o
-OPTIMIZERS = src/optimization/optimizers/vector_covering_optimizer.o
 
-OBJECTS = $(ENTITIES) $(OPTIMIZERS)
+ENTITIES = src/entities/vector.o
+
+SELECTORS = src/optimization/selection/score_selector.o \
+            src/optimization/selection/greedy_selector.o \
+            src/optimization/selection/greedy_alternative_selector.o \
+            src/optimization/selection/greedy_random_selector.o
+
+SOLVERS = src/optimization/solvers/vector_covering/vector_covering_solver.o
+
+OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS)
 
 all: main
 
