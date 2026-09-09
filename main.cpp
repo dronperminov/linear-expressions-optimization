@@ -5,6 +5,8 @@
 #include "src/optimization/selection/greedy_selector.h"
 #include "src/optimization/selection/greedy_alternative_selector.h"
 #include "src/optimization/selection/greedy_random_selector.h"
+
+#include "src/optimization/solvers/vector_covering/scorers/default_scorer.h"
 #include "src/optimization/solvers/vector_covering/vector_covering_solver.h"
 
 
@@ -22,9 +24,9 @@ int main() {
 
     VectorCoveringParameters parameters = {1};
 
-    VectorCoveringScorer defaultScorer;
-    VectorCoveringScorer scorer1(1000, 100, 5, 3);
-    VectorCoveringScorer scorer2(1, 1, 0, 0);
+    VectorCoveringDefaultScorer defaultScorer;
+    VectorCoveringDefaultScorer scorer1(1000, 100, 5, 3);
+    VectorCoveringDefaultScorer scorer2(1, 1, 0, 0);
 
     GreedySelector greedy;
     GreedyAlternativeSelector greedyAlternative(generator);

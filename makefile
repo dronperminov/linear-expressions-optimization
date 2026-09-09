@@ -8,7 +8,8 @@ SELECTORS = src/optimization/selection/score_selector.o \
             src/optimization/selection/greedy_alternative_selector.o \
             src/optimization/selection/greedy_random_selector.o
 
-SOLVERS = src/optimization/solvers/vector_covering/vector_covering_solver.o
+SOLVERS = src/optimization/solvers/vector_covering/scorers/default_scorer.o \
+          src/optimization/solvers/vector_covering/vector_covering_solver.o
 
 OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS)
 

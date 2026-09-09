@@ -9,41 +9,17 @@
 #include "../../../entities/solution.h"
 #include "../../../entities/vector.h"
 #include "../../selection/score_selector.h"
-
-struct Candidate {
-    Substitution step;
-    Vector vector;
-};
-
-struct VectorCoveringParameters {
-    int maxAbsValue;
-};
-
-struct VectorCoveringContext {
-    std::unordered_set<Vector> uncovered;
-    std::vector<Vector> vectors;
-};
-
-class VectorCoveringScorer {
-    double coverWeight;
-    double oneStepWeight;
-    double hammingWeight;
-    double matchesWeight;
-public:
-    VectorCoveringScorer();
-    VectorCoveringScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight);
-
-    void score(const std::vector<Candidate>& candidates, const VectorCoveringContext& context, std::vector<double>& scores) const;
-private:
-    void addOneStepScores(const std::vector<Candidate>& candidates, const VectorCoveringContext& context, std::vector<double>& scores) const;
-};
+#include "vector_covering_parameters.h"
+#include "vector_covering_context.h"
+#include "vector_covering_candidate.h"
+#include "vector_covering_scorer.h"
 
 class VectorCoveringSolver {
     int dimension;
     int count;
     std::vector<Vector> expressions;
     VectorCoveringParameters parameters;
-    VectorCoveringScorer scorer;
+    const VectorCoveringScorer* scorer;
     const ScoreSelector* selector;
 
     std::unordered_set<Vector> targets;
@@ -64,6 +40,6 @@ public:
 private:
     void initialize();
 
-    std::vector<Candidate> getCandidates() const;
-    void addCandidate(const Candidate& candidate);
+    std::vector<VectorCoveringCandidate> getCandidates() const;
+    void addCandidate(const VectorCoveringCandidate& candidate);
 };
