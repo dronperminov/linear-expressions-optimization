@@ -12,6 +12,8 @@ protected:
 public:
     AbstractSolver(const std::vector<std::vector<int>>& expressions);
 
+    const std::vector<std::vector<int>>& getExpressions() const;
+
     virtual size_t solve() = 0;
     virtual Solution getSolution() const = 0;
 

@@ -58,13 +58,13 @@ void printSolution(const Solution& solution) {
     std::cout << std::endl;
 }
 
-void solve(AbstractSolver& solver, const std::string& label, const std::vector<std::vector<int>>& expressions, bool showSolution) {
+void solve(AbstractSolver& solver, const std::string& label, bool showSolution) {
     int additions = solver.solve();
     std::cout << "Additions (" << label << "): " << additions << std::endl;
 
     SolutionValidator validator;
     Solution solution = solver.getSolution();
-    bool valid = validator.validate(expressions, solution);
+    bool valid = validator.validate(solver.getExpressions(), solution);
     std::cout << "Valid: " << (valid ? "yes" : "no") << std::endl;
 
     if (showSolution)
@@ -95,21 +95,21 @@ int main() {
     GreedyAlternativeSelector greedyAlternative(generator);
     GreedyRandomSelector greedyRandom(generator, 0.7);
 
-    VectorCoveringSolver solver(expressions, parameters, defaultScorer, greedy);
-    solve(solver, "default, greedy", expressions, true);
+    VectorCoveringSolver vectorSolver(expressions, parameters, defaultScorer, greedy);
+    solve(vectorSolver, "default, greedy", true);
 
-    solver.setScorer(scorer1);
-    solve(solver, "scorer1, greedy", expressions, true);
+    vectorSolver.setScorer(scorer1);
+    solve(vectorSolver, "scorer1, greedy", true);
 
-    solver.setScorer(scorer2);
-    solve(solver, "scorer2, greedy", expressions, true);
+    vectorSolver.setScorer(scorer2);
+    solve(vectorSolver, "scorer2, greedy", true);
 
-    solver.setScorer(defaultScorer);
-    solver.setSelector(greedyAlternative);
-    solve(solver, "default, greedy-alternative", expressions, true);
+    vectorSolver.setScorer(defaultScorer);
+    vectorSolver.setSelector(greedyAlternative);
+    solve(vectorSolver, "default, greedy-alternative", true);
 
-    solver.setSelector(greedyRandom);
-    solve(solver, "default, greedy-random", expressions, true);
+    vectorSolver.setSelector(greedyRandom);
+    solve(vectorSolver, "default, greedy-random", true);
 
     return 0;
 }
