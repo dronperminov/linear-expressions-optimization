@@ -9,8 +9,12 @@
 #include "src/optimization/selection/greedy_random_selector.h"
 
 #include "src/optimization/solvers/abstract_solver.h"
+
 #include "src/optimization/solvers/vector_covering/scorers/default_scorer.h"
 #include "src/optimization/solvers/vector_covering/vector_covering_solver.h"
+
+#include "src/optimization/solvers/cse/scorers/default_scorer.h"
+#include "src/optimization/solvers/cse/common_subexpression_solver.h"
 
 #include "src/validation/solution_validator.h"
 
@@ -95,21 +99,32 @@ int main() {
     GreedyAlternativeSelector greedyAlternative(generator);
     GreedyRandomSelector greedyRandom(generator, 0.7);
 
-    VectorCoveringSolver vectorSolver(expressions, parameters, defaultScorer, greedy);
-    solve(vectorSolver, "default, greedy", true);
+    VectorCoveringSolver vec(expressions, parameters, defaultScorer, greedy);
+    solve(vec, "vec: default, greedy", true);
 
-    vectorSolver.setScorer(scorer1);
-    solve(vectorSolver, "scorer1, greedy", true);
+    vec.setScorer(scorer1);
+    solve(vec, "vec: scorer1, greedy", true);
 
-    vectorSolver.setScorer(scorer2);
-    solve(vectorSolver, "scorer2, greedy", true);
+    vec.setScorer(scorer2);
+    solve(vec, "vec: scorer2, greedy", true);
 
-    vectorSolver.setScorer(defaultScorer);
-    vectorSolver.setSelector(greedyAlternative);
-    solve(vectorSolver, "default, greedy-alternative", true);
+    vec.setScorer(defaultScorer);
+    vec.setSelector(greedyAlternative);
+    solve(vec, "vec: default, greedy-alternative", true);
 
-    vectorSolver.setSelector(greedyRandom);
-    solve(vectorSolver, "default, greedy-random", true);
+    vec.setSelector(greedyRandom);
+    solve(vec, "vec: default, greedy-random", true);
+
+
+    CommonSubexpressionDefaultScorer cseDefaultScorer;
+    CommonSubexpressionSolver cse(expressions, cseDefaultScorer, greedy);
+    solve(cse, "cse: default, greedy", true);
+
+    cse.setSelector(greedyAlternative);
+    solve(cse, "cse: default, greedy-alternative", true);
+
+    cse.setSelector(greedyRandom);
+    solve(cse, "cse: default, greedy-random", true);
 
     return 0;
 }

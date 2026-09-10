@@ -10,7 +10,9 @@ SELECTORS = src/optimization/selection/score_selector.o \
 
 SOLVERS = src/optimization/solvers/abstract_solver.o \
           src/optimization/solvers/vector_covering/scorers/default_scorer.o \
-          src/optimization/solvers/vector_covering/vector_covering_solver.o
+          src/optimization/solvers/vector_covering/vector_covering_solver.o \
+          src/optimization/solvers/cse/scorers/default_scorer.o \
+          src/optimization/solvers/cse/common_subexpression_solver.o
 
 VALIDATORS = src/validation/solution_validator.o
 

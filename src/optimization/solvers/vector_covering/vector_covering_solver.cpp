@@ -1,6 +1,6 @@
 #include "vector_covering_solver.h"
 
-VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector &selector) : AbstractSolver(expressions) {
+VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector) : AbstractSolver(expressions) {
     setParameters(parameters);
     setScorer(scorer);
     setSelector(selector);
@@ -46,10 +46,9 @@ Solution VectorCoveringSolver::getSolution() const {
     for (size_t i = 0; i < expressions.size(); i++) {
         Vector expression(expressions[i]);
 
-        Term term;
-        term.index = vector2index[expression];
-        term.value = vectors[term.index].compare(expression);
-        solution.expressions.push_back({term});
+        size_t index = vector2index[expression];
+        int value = vectors[index].compare(expression);
+        solution.expressions.push_back({{index, value}});
     }
 
     return solution;

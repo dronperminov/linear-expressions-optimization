@@ -1,6 +1,6 @@
 #pragma once
 
 struct Term {
-    int index;
+    size_t index;
     int value;
 };

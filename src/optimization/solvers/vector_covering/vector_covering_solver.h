@@ -27,7 +27,7 @@ class VectorCoveringSolver : public AbstractSolver {
     std::vector<Substitution> steps;
     std::vector<double> scores;
 public:
-    VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector &selector);
+    VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector);
 
     void setParameters(const VectorCoveringParameters& parameters);
     void setScorer(const VectorCoveringScorer& scorer);
