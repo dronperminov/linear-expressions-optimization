@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <unordered_map>
 
+#include "../abstract_solver.h"
 #include "../../../entities/substitution.h"
 #include "../../../entities/solution.h"
 #include "../../../entities/vector.h"
@@ -14,7 +15,7 @@
 #include "vector_covering_candidate.h"
 #include "vector_covering_scorer.h"
 
-class VectorCoveringSolver {
+class VectorCoveringSolver : public AbstractSolver {
     size_t dimension;
     std::vector<Vector> expressions;
     VectorCoveringParameters parameters;
@@ -34,8 +35,8 @@ public:
     void setScorer(const VectorCoveringScorer& scorer);
     void setSelector(const ScoreSelector &selector);
 
-    size_t solve();
-    Solution getSolution() const;
+    size_t solve() override;
+    Solution getSolution() const override;
 private:
     void initialize();
 

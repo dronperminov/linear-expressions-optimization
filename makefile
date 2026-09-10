@@ -11,7 +11,9 @@ SELECTORS = src/optimization/selection/score_selector.o \
 SOLVERS = src/optimization/solvers/vector_covering/scorers/default_scorer.o \
           src/optimization/solvers/vector_covering/vector_covering_solver.o
 
-OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS)
+VALIDATORS = src/validation/solution_validator.o
+
+OBJECTS = $(ENTITIES) $(SELECTORS) $(VALIDATORS) $(SOLVERS)
 
 all: main
 

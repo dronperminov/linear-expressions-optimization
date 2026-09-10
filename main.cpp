@@ -8,26 +8,67 @@
 #include "src/optimization/selection/greedy_alternative_selector.h"
 #include "src/optimization/selection/greedy_random_selector.h"
 
+#include "src/optimization/solvers/abstract_solver.h"
 #include "src/optimization/solvers/vector_covering/scorers/default_scorer.h"
 #include "src/optimization/solvers/vector_covering/vector_covering_solver.h"
 
+#include "src/validation/solution_validator.h"
+
+
+void printTermFirst(size_t index, int value) {
+    if (value == -1)
+        std::cout << "-";
+    else if (value != 1)
+        std::cout << value;
+
+    std::cout << "x" << index;
+}
+
+void printTerm(size_t index, int value) {
+    std::cout << (value > 0 ? " + " : " - ");
+
+    if (value > 1 || value < -1)
+        std::cout << std::abs(value);
+
+    std::cout << "x" << index;
+}
 
 void printSolution(const Solution& solution) {
-    std::cout << "- substitutions:" << std::endl;
+    std::cout << "+ substitutions (" << solution.substitutions.size() << "):" << std::endl;
     for (size_t i = 0; i < solution.substitutions.size(); i++) {
         Substitution s = solution.substitutions[i];
-        std::cout << "  x" << (solution.dimension + i) << " = (" << s.ai << "x" << s.i << ", " << s.aj << "x" << s.j << ")" << std::endl;
+        std::cout << "| x" << (solution.dimension + i) << " = ";
+        printTermFirst(s.i, s.ai);
+        printTerm(s.j, s.aj);
+        std::cout << std::endl;
     }
 
-    std::cout << "- expressions:" << std::endl;
+    std::cout << std::endl;
+    std::cout << "+ expressions:" << std::endl;
     for (const std::vector<Term>& terms : solution.expressions) {
-        std::cout << "  " << terms[0].value << "x" << terms[0].index;
+        std::cout << "| ";
+        printTermFirst(terms[0].index, terms[0].value);
 
         for (size_t i = 1; i < terms.size(); i++)
-            std::cout << terms[i].value << "x" << terms[i].index;
+            printTerm(terms[i].index, terms[i].value);
 
         std::cout << std::endl;
     }
+
+    std::cout << std::endl;
+}
+
+void solve(AbstractSolver& solver, const std::string& label, const std::vector<std::vector<int>>& expressions, bool showSolution) {
+    int additions = solver.solve();
+    std::cout << "Additions (" << label << "): " << additions << std::endl;
+
+    SolutionValidator validator;
+    Solution solution = solver.getSolution();
+    bool valid = validator.validate(expressions, solution);
+    std::cout << "Valid: " << (valid ? "yes" : "no") << std::endl;
+
+    if (showSolution)
+        printSolution(solution);
 
     std::cout << std::endl;
 }
@@ -55,29 +96,20 @@ int main() {
     GreedyRandomSelector greedyRandom(generator, 0.7);
 
     VectorCoveringSolver solver(expressions, parameters, defaultScorer, greedy);
-    int additions = solver.solve();
-    std::cout << "Additions (default, greedy): " << additions << std::endl;
-    Solution solution = solver.getSolution();
-
-    std::cout << "Solution: " << std::endl;
-    printSolution(solution);
+    solve(solver, "default, greedy", expressions, true);
 
     solver.setScorer(scorer1);
-    additions = solver.solve();
-    std::cout << "Additions (scorer1, greedy): " << additions << std::endl;
+    solve(solver, "scorer1, greedy", expressions, true);
 
     solver.setScorer(scorer2);
-    additions = solver.solve();
-    std::cout << "Additions (scorer2, greedy): " << additions << std::endl;
+    solve(solver, "scorer2, greedy", expressions, true);
 
     solver.setScorer(defaultScorer);
     solver.setSelector(greedyAlternative);
-    additions = solver.solve();
-    std::cout << "Additions (default, greedy-alternative): " << additions << std::endl;
+    solve(solver, "default, greedy-alternative", expressions, true);
 
     solver.setSelector(greedyRandom);
-    additions = solver.solve();
-    std::cout << "Additions (default, greedy-random): " << additions << std::endl;
+    solve(solver, "default, greedy-random", expressions, true);
 
     return 0;
 }
