@@ -16,8 +16,6 @@
 #include "vector_covering_scorer.h"
 
 class VectorCoveringSolver : public AbstractSolver {
-    size_t dimension;
-    std::vector<Vector> expressions;
     VectorCoveringParameters parameters;
     const VectorCoveringScorer* scorer;
     const ScoreSelector* selector;
