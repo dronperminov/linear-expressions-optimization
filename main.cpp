@@ -14,6 +14,7 @@
 #include "src/optimization/solvers/vector_covering/vector_covering_solver.h"
 
 #include "src/optimization/solvers/cse/scorers/default_scorer.h"
+#include "src/optimization/solvers/cse/scorers/potential_scorer.h"
 #include "src/optimization/solvers/cse/common_subexpression_solver.h"
 
 #include "src/validation/solution_validator.h"
@@ -79,11 +80,29 @@ void solve(AbstractSolver& solver, const std::string& label, bool showSolution) 
 
 int main() {
     std::vector<std::vector<int>> expressions = {
-        {1, 1, 1, 1},
-        {1, 1, 1, 0},
-        {1, 1, 0, 1},
-        {1, 0, 1, 1},
-        {0, 1, 1, 1},
+        {1, 1, 1, -1, -1, 0, 0, -1, -1},
+        {1, 0, 0, -1, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0},
+        {-1, 0, 0, 1, 1, 0, 0, 0, 0},
+        {0, 0, 0, 1, 1, 0, 0, 0, 0},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0},
+        {-1, 0, 0, 0, 0, 0, 1, 1, 0},
+        {-1, 0, 0, 0, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 1, 1, 0},
+        {1, 1, 1, 0, -1, -1, -1, -1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, -1, 0, 0, 0, 0, 1, 1},
+        {0, 0, 1, 0, 0, 0, 0, 0, -1},
+        {0, 0, 1, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 1},
+        {0, 0, -1, 0, 1, 1, 0, 0, 0},
+        {0, 0, 1, 0, 0, -1, 0, 0, 0},
+        {0, 0, 0, 0, 1, 1, 0, 0, 0},
+        {0, 1, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 1}
     };
 
     int seed = time(0);
@@ -92,8 +111,7 @@ int main() {
     VectorCoveringParameters parameters = {1};
 
     VectorCoveringDefaultScorer defaultScorer;
-    VectorCoveringDefaultScorer scorer1(1000, 100, 5, 3);
-    VectorCoveringDefaultScorer scorer2(1, 1, 0, 0);
+    VectorCoveringDefaultScorer customScorer(1000, 100, 5, 3);
 
     GreedySelector greedy;
     GreedyAlternativeSelector greedyAlternative(generator);
@@ -102,24 +120,22 @@ int main() {
     VectorCoveringSolver vec(expressions, parameters, defaultScorer, greedy);
     solve(vec, "vec: default, greedy", true);
 
-    vec.setScorer(scorer1);
-    solve(vec, "vec: scorer1, greedy", true);
-
-    vec.setScorer(scorer2);
-    solve(vec, "vec: scorer2, greedy", true);
+    vec.setScorer(customScorer);
+    solve(vec, "vec: custom, greedy", true);
 
     vec.setScorer(defaultScorer);
     vec.setSelector(greedyAlternative);
     solve(vec, "vec: default, greedy-alternative", true);
 
-    vec.setSelector(greedyRandom);
-    solve(vec, "vec: default, greedy-random", true);
-
-
     CommonSubexpressionDefaultScorer cseDefaultScorer;
-    CommonSubexpressionSolver cse(expressions, cseDefaultScorer, greedy);
+    CommonSubexpressionPotentialScorer csePotentialScorer(0.3);
+    CommonSubexpressionSolver cse(expressions, cseDefaultScorer, greedyAlternative);
     solve(cse, "cse: default, greedy", true);
 
+    cse.setScorer(csePotentialScorer);
+    solve(cse, "cse: potential (0.3), greedy", true);
+
+    cse.setScorer(cseDefaultScorer);
     cse.setSelector(greedyAlternative);
     solve(cse, "cse: default, greedy-alternative", true);
 

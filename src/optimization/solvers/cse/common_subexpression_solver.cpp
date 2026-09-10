@@ -64,7 +64,7 @@ std::vector<Subexpression> CommonSubexpressionSolver::getSubexpressions() const 
                 if (matrix[k][i] == matrix[k][j]) {
                     positiveIndices.push_back(k);
                 }
-                else if (matrix[k][i] == -matrix[k][i]) {
+                else if (matrix[k][i] == -matrix[k][j]) {
                     negativeIndices.push_back(k);
                 }
             }
