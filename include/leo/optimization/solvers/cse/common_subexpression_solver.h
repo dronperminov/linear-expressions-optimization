@@ -1,18 +1,19 @@
 #pragma once
 
 #include <iostream>
-#include <vector>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-#include "../abstract_solver.h"
-#include "../../../entities/substitution.h"
-#include "../../../entities/solution.h"
-#include "../../selection/score_selector.h"
-#include "subexpression.h"
-#include "common_subexpression_context.h"
-#include "common_subexpression_scorer.h"
+#include <leo/entities/solution.h>
+#include <leo/entities/substitution.h>
+#include <leo/optimization/selection/score_selector.h>
+#include <leo/optimization/solvers/abstract_solver.h>
+#include <leo/optimization/solvers/cse/common_subexpression_scorer.h>
+#include <leo/optimization/solvers/cse/context.h>
+#include <leo/optimization/solvers/cse/subexpression.h>
 
+namespace leo::cse {
 
 class CommonSubexpressionSolver : public AbstractSolver {
     const CommonSubexpressionScorer* scorer;
@@ -25,8 +26,8 @@ class CommonSubexpressionSolver : public AbstractSolver {
 public:
     CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, const CommonSubexpressionScorer& scorer, const ScoreSelector& selector);
 
-    void setScorer(const CommonSubexpressionScorer &scorer);
-    void setSelector(const ScoreSelector &selector);
+    void setScorer(const CommonSubexpressionScorer& scorer);
+    void setSelector(const ScoreSelector& selector);
 
     size_t solve() override;
     Solution getSolution() const override;
@@ -37,3 +38,5 @@ private:
     void eliminate(const Subexpression& subexpression);
     size_t getAdditions() const;
 };
+
+} // namespace leo::cse

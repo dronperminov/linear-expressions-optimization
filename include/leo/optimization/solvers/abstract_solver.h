@@ -3,7 +3,9 @@
 #include <iostream>
 #include <vector>
 
-#include "../../entities/solution.h"
+#include <leo/entities/solution.h>
+
+namespace leo {
 
 class AbstractSolver {
 protected:
@@ -19,3 +21,5 @@ public:
 
     virtual ~AbstractSolver() = default;
 };
+
+} // namespace leo

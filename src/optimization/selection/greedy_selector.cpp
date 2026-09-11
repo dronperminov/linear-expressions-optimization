@@ -1,4 +1,6 @@
-#include "greedy_selector.h"
+#include <leo/optimization/selection/greedy_selector.h>
+
+namespace leo {
 
 size_t GreedySelector::selectIndex(const std::vector<double>& scores) const {
     size_t imax = 0;
@@ -9,3 +11,5 @@ size_t GreedySelector::selectIndex(const std::vector<double>& scores) const {
 
     return imax;
 }
+
+} // namespace leo

@@ -1,4 +1,6 @@
-#include "vector.h"
+#include <leo/entities/vector.h>
+
+namespace leo {
 
 Vector::Vector(const std::vector<int>& values) : canonized(values.size()) {
     this->values = values;
@@ -152,3 +154,5 @@ void Vector::canonize() {
         canonized[i] = value * sign;
     }
 }
+
+} // namespace leo

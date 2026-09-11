@@ -1,21 +1,23 @@
-#include "potential_scorer.h"
+#include <leo/optimization/solvers/cse/scorers/potential_scorer.h>
 
-CommonSubexpressionPotentialScorer::CommonSubexpressionPotentialScorer(double alpha) {
+namespace leo::cse {
+
+PotentialScorer::PotentialScorer(double alpha) {
     setAlpha(alpha);
 }
 
-void CommonSubexpressionPotentialScorer::setAlpha(double alpha) {
+void PotentialScorer::setAlpha(double alpha) {
     this->alpha = alpha;
 }
 
-void CommonSubexpressionPotentialScorer::score(const std::vector<Subexpression>& subexpressions, const CommonSubexpressionContext& context, std::vector<double>& scores) const {
+void PotentialScorer::score(const std::vector<Subexpression>& subexpressions, const Context& context, std::vector<double>& scores) const {
     scores.resize(subexpressions.size());
 
     for (size_t i = 0; i < subexpressions.size(); i++)
         scores[i] = getPotentialScore(subexpressions[i], context);
 }
 
-double CommonSubexpressionPotentialScorer::getPotentialScore(const Subexpression& subexpression, const CommonSubexpressionContext& context) const {
+double PotentialScorer::getPotentialScore(const Subexpression& subexpression, const Context& context) const {
     size_t variables = context.matrix[0].size();
     size_t expressions = context.matrix.size();
 
@@ -55,7 +57,7 @@ double CommonSubexpressionPotentialScorer::getPotentialScore(const Subexpression
     return subexpression.rows.size() - 1 + alpha * diff;
 }
 
-int CommonSubexpressionPotentialScorer::getSavingVecVec(const std::vector<int>& column1, const std::vector<int>& column2, size_t expressions) const {
+int PotentialScorer::getSavingVecVec(const std::vector<int>& column1, const std::vector<int>& column2, size_t expressions) const {
     int positive = 0;
     int negative = 0;
 
@@ -74,7 +76,7 @@ int CommonSubexpressionPotentialScorer::getSavingVecVec(const std::vector<int>& 
     return getSavingPart(positive) + getSavingPart(negative);
 }
 
-int CommonSubexpressionPotentialScorer::getSavingVecCol(const std::vector<int>& column, const std::vector<std::vector<int>>& matrix, size_t variable, size_t expressions) const {
+int PotentialScorer::getSavingVecCol(const std::vector<int>& column, const std::vector<std::vector<int>>& matrix, size_t variable, size_t expressions) const {
     int positive = 0;
     int negative = 0;
 
@@ -95,7 +97,7 @@ int CommonSubexpressionPotentialScorer::getSavingVecCol(const std::vector<int>& 
     return getSavingPart(positive) + getSavingPart(negative);
 }
 
-int CommonSubexpressionPotentialScorer::getSavingColCol(const std::vector<std::vector<int>>& matrix, size_t variable1, size_t variable2, size_t expressions) const {
+int PotentialScorer::getSavingColCol(const std::vector<std::vector<int>>& matrix, size_t variable1, size_t variable2, size_t expressions) const {
     int positive = 0;
     int negative = 0;
 
@@ -117,6 +119,8 @@ int CommonSubexpressionPotentialScorer::getSavingColCol(const std::vector<std::v
     return getSavingPart(positive) + getSavingPart(negative);   
 }
 
-int CommonSubexpressionPotentialScorer::getSavingPart(int count) const {
+int PotentialScorer::getSavingPart(int count) const {
     return std::max(count - 1, 0);
 }
+
+} // namespace leo::cse

@@ -2,23 +2,9 @@
 #include <ctime>
 #include <random>
 
-#include "src/entities/solution.h"
+#include <leo/leo.h>
 
-#include "src/optimization/selection/greedy_selector.h"
-#include "src/optimization/selection/greedy_alternative_selector.h"
-#include "src/optimization/selection/greedy_random_selector.h"
-
-#include "src/optimization/solvers/abstract_solver.h"
-
-#include "src/optimization/solvers/vector_covering/scorers/default_scorer.h"
-#include "src/optimization/solvers/vector_covering/vector_covering_solver.h"
-
-#include "src/optimization/solvers/cse/scorers/default_scorer.h"
-#include "src/optimization/solvers/cse/scorers/potential_scorer.h"
-#include "src/optimization/solvers/cse/common_subexpression_solver.h"
-
-#include "src/validation/solution_validator.h"
-
+using namespace leo;
 
 void printTermFirst(size_t index, int value) {
     if (value == -1)
@@ -108,16 +94,16 @@ int main() {
     int seed = time(0);
     std::mt19937 generator(seed);
 
-    VectorCoveringParameters parameters = {1};
+    vector_covering::VectorCoveringParameters parameters = {1};
 
-    VectorCoveringDefaultScorer defaultScorer;
-    VectorCoveringDefaultScorer customScorer(1000, 100, 5, 3);
+    vector_covering::DefaultScorer defaultScorer;
+    vector_covering::DefaultScorer customScorer(1000, 100, 5, 3);
 
     GreedySelector greedy;
     GreedyAlternativeSelector greedyAlternative(generator);
     GreedyRandomSelector greedyRandom(generator, 0.7);
 
-    VectorCoveringSolver vec(expressions, parameters, defaultScorer, greedy);
+    vector_covering::VectorCoveringSolver vec(expressions, parameters, defaultScorer, greedy);
     solve(vec, "vec: default, greedy", true);
 
     vec.setScorer(customScorer);
@@ -127,9 +113,9 @@ int main() {
     vec.setSelector(greedyAlternative);
     solve(vec, "vec: default, greedy-alternative", true);
 
-    CommonSubexpressionDefaultScorer cseDefaultScorer;
-    CommonSubexpressionPotentialScorer csePotentialScorer(0.3);
-    CommonSubexpressionSolver cse(expressions, cseDefaultScorer, greedyAlternative);
+    cse::DefaultScorer cseDefaultScorer;
+    cse::PotentialScorer csePotentialScorer(0.3);
+    cse::CommonSubexpressionSolver cse(expressions, cseDefaultScorer, greedyAlternative);
     solve(cse, "cse: default, greedy", true);
 
     cse.setScorer(csePotentialScorer);

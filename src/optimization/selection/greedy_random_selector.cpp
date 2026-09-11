@@ -1,4 +1,6 @@
-#include "greedy_random_selector.h"
+#include <leo/optimization/selection/greedy_random_selector.h>
+
+namespace leo {
 
 GreedyRandomSelector::GreedyRandomSelector(std::mt19937& generator, double probability) : generator(generator) {
     this->probability = probability;
@@ -15,3 +17,5 @@ size_t GreedyRandomSelector::selectIndex(const std::vector<double>& scores) cons
     std::uniform_int_distribution<size_t> dist(0, scores.size() - 1);
     return dist(generator);
 }
+
+} // namespace leo

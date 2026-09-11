@@ -1,5 +1,5 @@
 CXX = g++
-FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp
+FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp -Iinclude
 
 ENTITIES = src/entities/vector.o
 
@@ -15,9 +15,9 @@ SOLVERS = src/optimization/solvers/abstract_solver.o \
           src/optimization/solvers/cse/scorers/potential_scorer.o \
           src/optimization/solvers/cse/common_subexpression_solver.o
 
-VALIDATORS = src/validation/solution_validator.o
+UTILS = src/utils/solution_validator.o
 
-OBJECTS = $(ENTITIES) $(SELECTORS) $(VALIDATORS) $(SOLVERS)
+OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS) $(UTILS)
 
 all: main
 

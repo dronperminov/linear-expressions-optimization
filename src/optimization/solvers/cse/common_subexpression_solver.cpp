@@ -1,15 +1,17 @@
-#include "common_subexpression_solver.h"
+#include <leo/optimization/solvers/cse/common_subexpression_solver.h>
+
+namespace leo::cse {
 
 CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, const CommonSubexpressionScorer& scorer, const ScoreSelector& selector) : AbstractSolver(expressions) {
     setScorer(scorer);
     setSelector(selector);
 }
 
-void CommonSubexpressionSolver::setScorer(const CommonSubexpressionScorer &scorer) {
+void CommonSubexpressionSolver::setScorer(const CommonSubexpressionScorer& scorer) {
     this->scorer = &scorer;
 }
 
-void CommonSubexpressionSolver::setSelector(const ScoreSelector &selector) {
+void CommonSubexpressionSolver::setSelector(const ScoreSelector& selector) {
     this->selector = &selector;
 }
 
@@ -107,3 +109,5 @@ size_t CommonSubexpressionSolver::getAdditions() const {
 
     return additions;
 }
+
+} // namespace leo::cse

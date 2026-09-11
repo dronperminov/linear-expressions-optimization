@@ -1,8 +1,12 @@
-#include "default_scorer.h"
+#include <leo/optimization/solvers/cse/scorers/default_scorer.h>
 
-void CommonSubexpressionDefaultScorer::score(const std::vector<Subexpression>& subexpressions, const CommonSubexpressionContext& context, std::vector<double>& scores) const {
+namespace leo::cse {
+
+void DefaultScorer::score(const std::vector<Subexpression>& subexpressions, const Context& context, std::vector<double>& scores) const {
     scores.resize(subexpressions.size());
 
     for (size_t i = 0; i < subexpressions.size(); i++)
         scores[i] = subexpressions[i].rows.size() - 1;
 }
+
+} // namespace leo::cse

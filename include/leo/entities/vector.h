@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 
+namespace leo {
+
 class Vector {
     std::vector<int> values;
     std::vector<int> canonized;
@@ -32,10 +34,12 @@ private:
     void canonize();
 };
 
+} // namespace leo
+
 namespace std {
     template <>
-    struct hash<Vector> {
-        size_t operator()(const Vector& vector) const {
+    struct hash<leo::Vector> {
+        size_t operator()(const leo::Vector& vector) const {
             return vector.getHash();
         }
     };

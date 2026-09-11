@@ -1,4 +1,6 @@
-#include "vector_covering_solver.h"
+#include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
+
+namespace leo::vector_covering {
 
 VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector) : AbstractSolver(expressions) {
     setParameters(parameters);
@@ -17,7 +19,7 @@ void VectorCoveringSolver::setScorer(const VectorCoveringScorer& scorer) {
     this->scorer = &scorer;
 }
 
-void VectorCoveringSolver::setSelector(const ScoreSelector &selector) {
+void VectorCoveringSolver::setSelector(const ScoreSelector& selector) {
     this->selector = &selector;
 }
 
@@ -25,9 +27,9 @@ size_t VectorCoveringSolver::solve() {
     initialize();
 
     while (!uncovered.empty()) {
-        std::vector<VectorCoveringCandidate> candidates = getCandidates();
+        std::vector<Candidate> candidates = getCandidates();
         scorer->score(candidates, {uncovered, vectors}, scores);
-        VectorCoveringCandidate candidate = candidates[selector->selectIndex(scores)];
+        Candidate candidate = candidates[selector->selectIndex(scores)];
         addCandidate(candidate);
     }
 
@@ -71,18 +73,18 @@ void VectorCoveringSolver::initialize() {
     }
 }
 
-std::vector<VectorCoveringCandidate> VectorCoveringSolver::getCandidates() const {
-    std::vector<VectorCoveringCandidate> candidates;
+std::vector<Candidate> VectorCoveringSolver::getCandidates() const {
+    std::vector<Candidate> candidates;
     std::unordered_set<Vector> unique;
 
     for (size_t i = 0; i < vectors.size(); i++) {
         for (size_t j = i + 1; j < vectors.size(); j++) {
-            std::vector<VectorCoveringCandidate> vs = {
+            std::vector<Candidate> vs = {
                 {{i, j, 1, 1}, vectors[i] + vectors[j]},
                 {{i, j, 1, -1}, vectors[i] - vectors[j]}
             };
 
-            for (const VectorCoveringCandidate& candidate : vs) {
+            for (const Candidate& candidate : vs) {
                 if (pool.find(candidate.vector) != pool.end())
                     continue;
 
@@ -101,9 +103,11 @@ std::vector<VectorCoveringCandidate> VectorCoveringSolver::getCandidates() const
     return candidates;
 }
 
-void VectorCoveringSolver::addCandidate(const VectorCoveringCandidate& candidate) {
+void VectorCoveringSolver::addCandidate(const Candidate& candidate) {
     pool.insert(candidate.vector);
     vectors.push_back(candidate.vector);
     steps.push_back(candidate.step);
     uncovered.erase(candidate.vector);
 }
+
+} // namespace leo::vector_covering

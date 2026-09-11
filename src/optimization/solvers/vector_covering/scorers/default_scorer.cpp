@@ -1,21 +1,22 @@
-#include "default_scorer.h"
+#include <leo/optimization/solvers/vector_covering/scorers/default_scorer.h>
 
+namespace leo::vector_covering {
 
-VectorCoveringDefaultScorer::VectorCoveringDefaultScorer() {
+DefaultScorer::DefaultScorer() {
     coverWeight = 1000.0;
     oneStepWeight = 100.0;
     hammingWeight = 0.0;
     matchesWeight = 1.0;
 }
 
-VectorCoveringDefaultScorer::VectorCoveringDefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight) {
+DefaultScorer::DefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight) {
     this->coverWeight = coverWeight;
     this->oneStepWeight = oneStepWeight;
     this->hammingWeight = hammingWeight;
     this->matchesWeight = matchesWeight;
 }
 
-void VectorCoveringDefaultScorer::score(const std::vector<VectorCoveringCandidate>& candidates, const VectorCoveringContext& context, std::vector<double>& scores) const {
+void DefaultScorer::score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const {
     scores.resize(candidates.size());
 
     for (size_t i = 0; i < candidates.size(); i++) {
@@ -41,7 +42,7 @@ void VectorCoveringDefaultScorer::score(const std::vector<VectorCoveringCandidat
         addOneStepScores(candidates, context, scores);
 }
 
-void VectorCoveringDefaultScorer::addOneStepScores(const std::vector<VectorCoveringCandidate>& candidates, const VectorCoveringContext& context, std::vector<double>& scores) const {
+void DefaultScorer::addOneStepScores(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const {
     std::unordered_map<Vector, size_t> vector2index;
     for (size_t i = 0; i < candidates.size(); i++)
         vector2index[candidates[i].vector] = i;
@@ -63,3 +64,5 @@ void VectorCoveringDefaultScorer::addOneStepScores(const std::vector<VectorCover
             scores[index] += oneStepWeight;
     }
 }
+
+} // namespace leo::vector_covering

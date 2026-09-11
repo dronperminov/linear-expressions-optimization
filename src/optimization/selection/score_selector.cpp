@@ -1,4 +1,6 @@
-#include "score_selector.h"
+#include <leo/optimization/selection/score_selector.h>
+
+namespace leo {
 
 double ScoreSelector::getMaxScore(const std::vector<double>& scores) const {
     double maxScore = scores[0];
@@ -19,3 +21,5 @@ std::vector<size_t> ScoreSelector::getMaxScoreIndices(const std::vector<double>&
 
     return indices;
 }
+
+} // namespace leo

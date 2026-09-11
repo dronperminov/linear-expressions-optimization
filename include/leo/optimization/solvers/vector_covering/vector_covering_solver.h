@@ -1,19 +1,21 @@
 #pragma once
 
 #include <iostream>
-#include <vector>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-#include "../abstract_solver.h"
-#include "../../../entities/substitution.h"
-#include "../../../entities/solution.h"
-#include "../../../entities/vector.h"
-#include "../../selection/score_selector.h"
-#include "vector_covering_parameters.h"
-#include "vector_covering_context.h"
-#include "vector_covering_candidate.h"
-#include "vector_covering_scorer.h"
+#include <leo/entities/solution.h>
+#include <leo/entities/substitution.h>
+#include <leo/entities/vector.h>
+#include <leo/optimization/selection/score_selector.h>
+#include <leo/optimization/solvers/abstract_solver.h>
+#include <leo/optimization/solvers/vector_covering/candidate.h>
+#include <leo/optimization/solvers/vector_covering/context.h>
+#include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
+#include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
+
+namespace leo::vector_covering {
 
 class VectorCoveringSolver : public AbstractSolver {
     VectorCoveringParameters parameters;
@@ -31,13 +33,15 @@ public:
 
     void setParameters(const VectorCoveringParameters& parameters);
     void setScorer(const VectorCoveringScorer& scorer);
-    void setSelector(const ScoreSelector &selector);
+    void setSelector(const ScoreSelector& selector);
 
     size_t solve() override;
     Solution getSolution() const override;
 private:
     void initialize();
 
-    std::vector<VectorCoveringCandidate> getCandidates() const;
-    void addCandidate(const VectorCoveringCandidate& candidate);
+    std::vector<Candidate> getCandidates() const;
+    void addCandidate(const Candidate& candidate);
 };
+
+} // namespace leo::vector_covering
