@@ -9,6 +9,10 @@ VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& 
 
     for (const std::vector<int>& expression : expressions)
         targets.insert(Vector(expression));
+
+    naiveComplexity = 0;
+    for (const Vector& target : targets)
+        naiveComplexity += target.getSupport() - 1;
 }
 
 void VectorCoveringSolver::setParameters(const VectorCoveringParameters& parameters) {
@@ -26,12 +30,15 @@ void VectorCoveringSolver::setSelector(const ScoreSelector& selector) {
 size_t VectorCoveringSolver::solve() {
     initialize();
 
-    while (!uncovered.empty()) {
+    while (!uncovered.empty() && (!parameters.naiveFallback || steps.size() < naiveComplexity)) {
         std::vector<Candidate> candidates = getCandidates();
         scorer->score(candidates, {uncovered, vectors}, scores);
         Candidate candidate = candidates[selector->selectIndex(scores)];
         addCandidate(candidate);
     }
+
+    if (parameters.naiveFallback && steps.size() >= naiveComplexity)
+        fallbackToNaive();
 
     return steps.size();
 }
@@ -108,6 +115,31 @@ void VectorCoveringSolver::addCandidate(const Candidate& candidate) {
     vectors.push_back(candidate.vector);
     steps.push_back(candidate.step);
     uncovered.erase(candidate.vector);
+}
+
+void VectorCoveringSolver::fallbackToNaive() {
+    initialize();
+
+    while (!uncovered.empty()) {
+        const Vector& target = *uncovered.begin();
+        std::vector<size_t> indices;
+        for (size_t i = 0; i < dimension; i++)
+            if (target[i])
+                indices.push_back(i);
+
+        size_t i = indices[0];
+        size_t j = indices[1];
+
+        vectors.push_back(vectors[i] * target[i] + vectors[j] * target[j]);
+        steps.push_back({i, j, target[i], target[j]});
+        uncovered.erase(vectors.back());
+
+        for (size_t k = 2; k < indices.size(); k++) {
+            steps.push_back({vectors.size() - 1, indices[k], 1, target[indices[k]]});
+            vectors.push_back(vectors.back() + vectors[indices[k]] * target[indices[k]]);
+            uncovered.erase(vectors.back());
+        }
+    }
 }
 
 } // namespace leo::vector_covering

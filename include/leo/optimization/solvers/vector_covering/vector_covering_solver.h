@@ -22,6 +22,7 @@ class VectorCoveringSolver : public AbstractSolver {
     const VectorCoveringScorer* scorer;
     const ScoreSelector* selector;
 
+    size_t naiveComplexity;
     std::unordered_set<Vector> targets;
     std::unordered_set<Vector> uncovered;
     std::unordered_set<Vector> pool;
@@ -42,6 +43,8 @@ private:
 
     std::vector<Candidate> getCandidates() const;
     void addCandidate(const Candidate& candidate);
+
+    void fallbackToNaive();
 };
 
 } // namespace leo::vector_covering

@@ -58,6 +58,9 @@ void solve(AbstractSolver& solver, const std::string& label, bool showSolution) 
     bool valid = validator.validate(solver.getExpressions(), solution);
     std::cout << "Valid: " << (valid ? "yes" : "no") << std::endl;
 
+    if (!valid)
+        throw std::runtime_error("invalid solution");
+
     if (showSolution)
         printSolution(solution);
 
@@ -94,7 +97,7 @@ int main() {
     int seed = time(0);
     std::mt19937 generator(seed);
 
-    vector_covering::VectorCoveringParameters parameters = {1};
+    vector_covering::VectorCoveringParameters parameters = {1, true};
 
     vector_covering::DefaultScorer defaultScorer;
     vector_covering::DefaultScorer customScorer(1000, 100, 5, 3);
