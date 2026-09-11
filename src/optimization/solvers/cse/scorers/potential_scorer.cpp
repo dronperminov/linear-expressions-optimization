@@ -22,9 +22,8 @@ double PotentialScorer::getPotentialScore(const Subexpression& subexpression, co
     size_t expressions = context.matrix.size();
 
     std::vector<int> column(expressions, 0);
-    for (size_t i = 0; i < expressions; i++)
-        if (context.matrix[i][subexpression.i] != 0 && context.matrix[i][subexpression.i] == subexpression.sign * context.matrix[i][subexpression.j])
-            column[i] = context.matrix[i][subexpression.i];
+    for (size_t i : subexpression.rows)
+        column[i] = context.matrix[i][subexpression.i];
 
     std::vector<int> column1(expressions);
     std::vector<int> column2(expressions);
@@ -35,33 +34,33 @@ double PotentialScorer::getPotentialScore(const Subexpression& subexpression, co
     }
 
     int diff = 0;
-    diff += getSavingVecVec(column1, column2, expressions);
-    diff -= getSavingColCol(context.matrix, subexpression.i, subexpression.j, expressions);
+    diff += getSavingVecVec(column1, column2);
+    diff -= getSavingColCol(context.matrix, subexpression.i, subexpression.j);
 
-    diff += getSavingVecVec(column, column1, expressions);
-    diff += getSavingVecVec(column, column2, expressions);
+    diff += getSavingVecVec(column, column1);
+    diff += getSavingVecVec(column, column2);
 
     for (size_t i = 0; i < variables; i++) {
         if (i == subexpression.i || i == subexpression.j)
             continue;
 
-        diff += getSavingVecCol(column1, context.matrix, i, expressions);
-        diff -= getSavingColCol(context.matrix, subexpression.i, i, expressions);
+        diff += getSavingVecCol(column1, context.matrix, i);
+        diff -= getSavingColCol(context.matrix, subexpression.i, i);
 
-        diff += getSavingVecCol(column2, context.matrix, i, expressions);
-        diff -= getSavingColCol(context.matrix, subexpression.j, i, expressions);
+        diff += getSavingVecCol(column2, context.matrix, i);
+        diff -= getSavingColCol(context.matrix, subexpression.j, i);
 
-        diff += getSavingVecCol(column, context.matrix, i, expressions);
+        diff += getSavingVecCol(column, context.matrix, i);
     }
 
     return subexpression.rows.size() - 1 + alpha * diff;
 }
 
-int PotentialScorer::getSavingVecVec(const std::vector<int>& column1, const std::vector<int>& column2, size_t expressions) const {
+int PotentialScorer::getSavingVecVec(const std::vector<int>& column1, const std::vector<int>& column2) const {
     int positive = 0;
     int negative = 0;
 
-    for (size_t i = 0; i < expressions; i++) {
+    for (size_t i = 0; i < column1.size(); i++) {
         if (column1[i] == 0 || column2[i] == 0)
             continue;
 
@@ -76,11 +75,11 @@ int PotentialScorer::getSavingVecVec(const std::vector<int>& column1, const std:
     return getSavingPart(positive) + getSavingPart(negative);
 }
 
-int PotentialScorer::getSavingVecCol(const std::vector<int>& column, const std::vector<std::vector<int>>& matrix, size_t variable, size_t expressions) const {
+int PotentialScorer::getSavingVecCol(const std::vector<int>& column, const std::vector<std::vector<int>>& matrix, size_t variable) const {
     int positive = 0;
     int negative = 0;
 
-    for (size_t i = 0; i < expressions; i++) {
+    for (size_t i = 0; i < column.size(); i++) {
         int value = matrix[i][variable];
 
         if (column[i] == 0 || value == 0)
@@ -97,11 +96,11 @@ int PotentialScorer::getSavingVecCol(const std::vector<int>& column, const std::
     return getSavingPart(positive) + getSavingPart(negative);
 }
 
-int PotentialScorer::getSavingColCol(const std::vector<std::vector<int>>& matrix, size_t variable1, size_t variable2, size_t expressions) const {
+int PotentialScorer::getSavingColCol(const std::vector<std::vector<int>>& matrix, size_t variable1, size_t variable2) const {
     int positive = 0;
     int negative = 0;
 
-    for (size_t i = 0; i < expressions; i++) {
+    for (size_t i = 0; i < matrix.size(); i++) {
         int value1 = matrix[i][variable1];
         int value2 = matrix[i][variable2];
 

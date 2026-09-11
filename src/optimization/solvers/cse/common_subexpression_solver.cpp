@@ -60,7 +60,7 @@ std::vector<Subexpression> CommonSubexpressionSolver::getSubexpressions() const 
             std::vector<size_t> negativeIndices;
 
             for (size_t k = 0; k < matrix.size(); k++) {
-                if (matrix[k][i] == 0 || matrix[k][j] == 0)
+                if (matrix[k][i] == 0)
                     continue;
 
                 if (matrix[k][i] == matrix[k][j]) {
