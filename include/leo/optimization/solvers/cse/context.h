@@ -5,7 +5,7 @@
 namespace leo::cse {
 
 struct Context {
-    std::vector<std::vector<int>> matrix;
+    const std::vector<std::vector<int>>& matrix;
 };
 
 } // namespace leo::cse

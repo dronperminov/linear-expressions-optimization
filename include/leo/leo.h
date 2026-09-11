@@ -16,7 +16,7 @@
 #include <leo/optimization/selection/score_selector.h>
 
 // solvers
-#include <leo/optimization/solvers/abstract_solver.h>
+#include <leo/optimization/solvers/solver.h>
 
 // cse solver
 #include <leo/optimization/solvers/cse/common_subexpression_scorer.h>

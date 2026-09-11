@@ -2,7 +2,7 @@
 
 namespace leo::cse {
 
-CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, const CommonSubexpressionScorer& scorer, const ScoreSelector& selector) : AbstractSolver(expressions) {
+CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, const CommonSubexpressionScorer& scorer, const ScoreSelector& selector) : Solver(expressions) {
     setScorer(scorer);
     setSelector(selector);
 }

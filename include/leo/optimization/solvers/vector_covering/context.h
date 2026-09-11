@@ -8,8 +8,8 @@
 namespace leo::vector_covering {
 
 struct Context {
-    std::unordered_set<Vector> uncovered;
-    std::vector<Vector> vectors;
+    const std::unordered_set<Vector>& uncovered;
+    const std::vector<Vector>& vectors;
 };
 
 } // namespace leo::vector_covering

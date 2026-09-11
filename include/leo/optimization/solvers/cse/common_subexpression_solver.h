@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -8,14 +7,14 @@
 #include <leo/entities/solution.h>
 #include <leo/entities/substitution.h>
 #include <leo/optimization/selection/score_selector.h>
-#include <leo/optimization/solvers/abstract_solver.h>
 #include <leo/optimization/solvers/cse/common_subexpression_scorer.h>
 #include <leo/optimization/solvers/cse/context.h>
 #include <leo/optimization/solvers/cse/subexpression.h>
+#include <leo/optimization/solvers/solver.h>
 
 namespace leo::cse {
 
-class CommonSubexpressionSolver : public AbstractSolver {
+class CommonSubexpressionSolver : public Solver {
     const CommonSubexpressionScorer* scorer;
     const ScoreSelector* selector;
 

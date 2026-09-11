@@ -2,7 +2,7 @@
 
 namespace leo::vector_covering {
 
-VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector) : AbstractSolver(expressions) {
+VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector) : Solver(expressions) {
     setParameters(parameters);
     setScorer(scorer);
     setSelector(selector);

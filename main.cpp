@@ -49,7 +49,7 @@ void printSolution(const Solution& solution) {
     std::cout << std::endl;
 }
 
-void solve(AbstractSolver& solver, const std::string& label, bool showSolution) {
+void solve(Solver& solver, const std::string& label, bool showSolution) {
     int additions = solver.solve();
     std::cout << "Additions (" << label << "): " << additions << std::endl;
 
@@ -104,7 +104,7 @@ int main() {
 
     GreedySelector greedy;
     GreedyAlternativeSelector greedyAlternative(generator);
-    GreedyRandomSelector greedyRandom(generator, 0.7);
+    GreedyRandomSelector greedyRandom(generator, 0.3);
 
     vector_covering::VectorCoveringSolver vec(expressions, parameters, defaultScorer, greedy);
     solve(vec, "vec: default, greedy", true);

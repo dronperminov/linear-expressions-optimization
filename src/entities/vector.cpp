@@ -2,8 +2,7 @@
 
 namespace leo {
 
-Vector::Vector(const std::vector<int>& values) : canonized(values.size()) {
-    this->values = values;
+Vector::Vector(const std::vector<int>& values) : values(values), canonized(values.size()) {
     canonize();
 }
 

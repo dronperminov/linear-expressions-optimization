@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -9,7 +8,7 @@
 #include <leo/entities/substitution.h>
 #include <leo/entities/vector.h>
 #include <leo/optimization/selection/score_selector.h>
-#include <leo/optimization/solvers/abstract_solver.h>
+#include <leo/optimization/solvers/solver.h>
 #include <leo/optimization/solvers/vector_covering/candidate.h>
 #include <leo/optimization/solvers/vector_covering/context.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
@@ -17,7 +16,7 @@
 
 namespace leo::vector_covering {
 
-class VectorCoveringSolver : public AbstractSolver {
+class VectorCoveringSolver : public Solver {
     VectorCoveringParameters parameters;
     const VectorCoveringScorer* scorer;
     const ScoreSelector* selector;
