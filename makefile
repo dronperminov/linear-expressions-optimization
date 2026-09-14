@@ -1,7 +1,8 @@
 CXX = g++
 FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp -Iinclude
 
-ENTITIES = src/entities/vector.o
+ENTITIES = src/entities/vector.o \
+           src/entities/expressions_system.o
 
 SELECTORS = src/optimization/selection/score_selector.o \
             src/optimization/selection/greedy_selector.o \

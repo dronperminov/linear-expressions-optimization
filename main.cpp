@@ -49,13 +49,12 @@ void printSolution(const Solution& solution) {
     std::cout << std::endl;
 }
 
-void solve(Solver& solver, const std::string& label, bool showSolution) {
+void solve(const ExpressionsSystem& expressionsSystem, Solver& solver, const std::string& label, bool showSolution) {
     int additions = solver.solve();
     std::cout << "Additions (" << label << "): " << additions << std::endl;
 
-    SolutionValidator validator;
     Solution solution = solver.getSolution();
-    bool valid = validator.validate(solver.getExpressions(), solution);
+    bool valid = expressionsSystem.validateSolution(solution);
     std::cout << "Valid: " << (valid ? "yes" : "no") << std::endl;
 
     if (!valid)
@@ -68,7 +67,7 @@ void solve(Solver& solver, const std::string& label, bool showSolution) {
 }
 
 int main() {
-    std::vector<std::vector<int>> expressions = {
+    ExpressionsSystem expressionsSystem({
         {1, 1, 1, -1, -1, 0, 0, -1, -1},
         {1, 0, 0, -1, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 1, 0, 0, 0, 0},
@@ -92,7 +91,13 @@ int main() {
         {0, 0, 0, 1, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 1, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 1}
-    };
+    });
+
+    std::cout << "Initial system:" << std::endl;
+    std::cout << "- variables: " << expressionsSystem.getVariablesCount() << std::endl;
+    std::cout << "- expressions: " << expressionsSystem.getExpressionsCount() << std::endl;
+    std::cout << "- lower bound: " << expressionsSystem.getAdditionsLowerBound() << std::endl;
+    std::cout << std::endl;
 
     int seed = time(0);
     std::mt19937 generator(seed);
@@ -106,30 +111,30 @@ int main() {
     GreedyAlternativeSelector greedyAlternative(generator);
     GreedyRandomSelector greedyRandom(generator, 0.3);
 
-    vector_covering::VectorCoveringSolver vec(expressions, parameters, defaultScorer, greedy);
-    solve(vec, "vec: default, greedy", true);
+    vector_covering::VectorCoveringSolver vec(expressionsSystem.getExpressions(), parameters, defaultScorer, greedy);
+    solve(expressionsSystem, vec, "vec: default, greedy", true);
 
     vec.setScorer(customScorer);
-    solve(vec, "vec: custom, greedy", true);
+    solve(expressionsSystem, vec, "vec: custom, greedy", true);
 
     vec.setScorer(defaultScorer);
     vec.setSelector(greedyAlternative);
-    solve(vec, "vec: default, greedy-alternative", true);
+    solve(expressionsSystem, vec, "vec: default, greedy-alternative", true);
 
     cse::DefaultScorer cseDefaultScorer;
     cse::PotentialScorer csePotentialScorer(0.3);
-    cse::CommonSubexpressionSolver cse(expressions, cseDefaultScorer, greedyAlternative);
-    solve(cse, "cse: default, greedy", true);
+    cse::CommonSubexpressionSolver cse(expressionsSystem.getExpressions(), cseDefaultScorer, greedyAlternative);
+    solve(expressionsSystem, cse, "cse: default, greedy", true);
 
     cse.setScorer(csePotentialScorer);
-    solve(cse, "cse: potential (0.3), greedy", true);
+    solve(expressionsSystem, cse, "cse: potential (0.3), greedy", true);
 
     cse.setScorer(cseDefaultScorer);
     cse.setSelector(greedyAlternative);
-    solve(cse, "cse: default, greedy-alternative", true);
+    solve(expressionsSystem, cse, "cse: default, greedy-alternative", true);
 
     cse.setSelector(greedyRandom);
-    solve(cse, "cse: default, greedy-random", true);
+    solve(expressionsSystem, cse, "cse: default, greedy-random", true);
 
     return 0;
 }

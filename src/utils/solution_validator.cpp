@@ -1,6 +1,6 @@
 #include <leo/utils/solution_validator.h>
 
-namespace leo {
+namespace leo::utils {
 
 bool SolutionValidator::validate(const std::vector<std::vector<int>>& expressions, const Solution& solution) const {
     if (expressions.size() != solution.expressions.size())
@@ -35,4 +35,4 @@ bool SolutionValidator::validate(const std::vector<std::vector<int>>& expression
     return true;
 }
 
-} // namespace leo
+} // namespace leo::utils
