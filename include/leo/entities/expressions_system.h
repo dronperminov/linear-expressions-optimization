@@ -18,7 +18,10 @@ public:
 
     size_t getVariablesCount() const;
     size_t getExpressionsCount() const;
+    size_t getNaiveAdditions() const;
     size_t getAdditionsLowerBound() const;
+
+    int getMaxAbsValue() const;
 
     const std::vector<std::vector<int>>& getExpressions() const;
     std::vector<std::vector<int>> getTransposedExpressions() const;

@@ -15,6 +15,22 @@ size_t ExpressionsSystem::getExpressionsCount() const {
     return count;
 }
 
+size_t ExpressionsSystem::getNaiveAdditions() const {
+    size_t additions = 0;
+
+    for (const std::vector<int>& expression : expressions) {
+        size_t expressionAdditions = 0;
+
+        for (int value : expression)
+            expressionAdditions += value != 0;
+
+        if (expressionAdditions)
+            additions += expressionAdditions - 1;
+    }
+
+    return additions;
+}
+
 size_t ExpressionsSystem::getAdditionsLowerBound() const {
     if (count == 0 || dimension < 2)
         return 0;
@@ -22,7 +38,17 @@ size_t ExpressionsSystem::getAdditionsLowerBound() const {
     if (count >= dimension)
         return getAdditionsLowerBound(expressions);
 
-    return getAdditionsLowerBound(getTransposedExpressions()) + count - dimension;
+    return getAdditionsLowerBound(getTransposedExpressions()) + dimension - count;
+}
+
+int ExpressionsSystem::getMaxAbsValue() const {
+    int maxAbsValue = 0;
+
+    for (const std::vector<int>& expression : expressions)
+        for (int value : expression)
+            maxAbsValue = std::max(maxAbsValue, std::abs(value));
+
+    return maxAbsValue;
 }
 
 const std::vector<std::vector<int>>& ExpressionsSystem::getExpressions() const {

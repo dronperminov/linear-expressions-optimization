@@ -93,16 +93,20 @@ int main() {
         {0, 0, 0, 0, 0, 0, 0, 0, 1}
     });
 
+    int maxAbsValue = expressionsSystem.getMaxAbsValue();
+
     std::cout << "Initial system:" << std::endl;
     std::cout << "- variables: " << expressionsSystem.getVariablesCount() << std::endl;
     std::cout << "- expressions: " << expressionsSystem.getExpressionsCount() << std::endl;
+    std::cout << "- max abs value: " << maxAbsValue << std::endl;
+    std::cout << "- naive additions: " << expressionsSystem.getNaiveAdditions() << std::endl;
     std::cout << "- lower bound: " << expressionsSystem.getAdditionsLowerBound() << std::endl;
     std::cout << std::endl;
 
     int seed = time(0);
     std::mt19937 generator(seed);
 
-    vector_covering::VectorCoveringParameters parameters = {1, true, true};
+    vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
     vector_covering::DefaultScorer defaultScorer;
     vector_covering::DefaultScorer customScorer(1000, 100, 5, 3);
