@@ -40,6 +40,9 @@ size_t VectorCoveringSolver::solve() {
     if (parameters.naiveFallback && steps.size() >= naiveComplexity)
         fallbackToNaive();
 
+    if (parameters.removeUnused)
+        removeUnused();
+
     return steps.size();
 }
 
@@ -140,6 +143,46 @@ void VectorCoveringSolver::fallbackToNaive() {
             uncovered.erase(vectors.back());
         }
     }
+}
+
+void VectorCoveringSolver::removeUnused() {
+    std::vector<bool> used(vectors.size(), false);
+
+    for (size_t i = 0; i < steps.size(); i++) {
+        size_t index = steps.size() - 1 - i;
+
+        if (targets.find(vectors[dimension + index]) != targets.end())
+            used[dimension + index] = true;
+
+        if (used[dimension + index]) {
+            used[steps[index].i] = true;
+            used[steps[index].j] = true;
+        }
+    }
+
+    std::vector<size_t> indices(vectors.size());
+    for (size_t i = 0; i < indices.size(); i++)
+        indices[i] = i;
+
+    size_t j = 0;
+    for (size_t i = 0; i < steps.size(); i++) {
+        if (!used[dimension + i])
+            continue;
+
+        indices[dimension + i] = dimension + j;
+        steps[i].i = indices[steps[i].i];
+        steps[i].j = indices[steps[i].j];
+
+        if (i != j) {
+            steps[j] = steps[i];
+            vectors[dimension + j] = vectors[dimension + i];
+        }
+
+        j++;
+    }
+
+    steps.erase(steps.begin() + j, steps.end());
+    vectors.erase(vectors.begin() + dimension + j, vectors.end());
 }
 
 } // namespace leo::vector_covering

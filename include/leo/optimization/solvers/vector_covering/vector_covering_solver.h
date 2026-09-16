@@ -44,6 +44,7 @@ private:
     void addCandidate(const Candidate& candidate);
 
     void fallbackToNaive();
+    void removeUnused();
 };
 
 } // namespace leo::vector_covering

@@ -102,7 +102,7 @@ int main() {
     int seed = time(0);
     std::mt19937 generator(seed);
 
-    vector_covering::VectorCoveringParameters parameters = {1, true};
+    vector_covering::VectorCoveringParameters parameters = {1, true, true};
 
     vector_covering::DefaultScorer defaultScorer;
     vector_covering::DefaultScorer customScorer(1000, 100, 5, 3);
