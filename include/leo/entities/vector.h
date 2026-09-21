@@ -30,6 +30,7 @@ public:
     size_t getDimension() const;
     size_t getSupport() const;
     int getMaxAbs() const;
+    int getDistance(const Vector& vector) const;
     size_t getHammingDistance(const Vector& vector) const;
     size_t getMatchesCount(const Vector& vector) const;
     std::vector<size_t> getNonZeroIndices() const;

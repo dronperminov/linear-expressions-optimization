@@ -7,13 +7,15 @@ DefaultScorer::DefaultScorer() {
     oneStepWeight = 100.0;
     hammingWeight = 0.0;
     matchesWeight = 1.0;
+    distanceWeight = 0.0;
 }
 
-DefaultScorer::DefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight) {
+DefaultScorer::DefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight, double distanceWeight) {
     this->coverWeight = coverWeight;
     this->oneStepWeight = oneStepWeight;
     this->hammingWeight = hammingWeight;
     this->matchesWeight = matchesWeight;
+    this->distanceWeight = distanceWeight;
 }
 
 void DefaultScorer::score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const {
@@ -31,9 +33,11 @@ void DefaultScorer::score(const std::vector<Candidate>& candidates, const Contex
 
             size_t hamming = canonized.getDimension() - canonized.getHammingDistance(target);
             size_t matches = canonized.getMatchesCount(target);
+            int distance = canonized.getDistance(target);
 
             score += hamming * hammingWeight;
             score += matches * matchesWeight;
+            score += distance * distanceWeight;
         }
 
         scores[i] = score;
