@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include <stdexcept>
 
 #include <leo/optimization/selection/score_selector.h>
 

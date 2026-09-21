@@ -28,10 +28,14 @@ size_t CommonSubexpressionSolver::solve() {
         eliminate(subexpression);
     }
 
+    solved = true;
     return getAdditions();
 }
 
 Solution CommonSubexpressionSolver::getSolution() const {
+    if (!solved)
+        throw std::runtime_error("CommonSubexpressionSolver::getSolution: solution is not available yet, call solve() first");
+
     Solution solution;
     solution.dimension = dimension;
     solution.substitutions = substitutions;

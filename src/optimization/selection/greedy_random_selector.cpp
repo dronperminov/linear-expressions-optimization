@@ -7,6 +7,9 @@ GreedyRandomSelector::GreedyRandomSelector(std::mt19937& generator, double rando
 }
 
 void GreedyRandomSelector::setRandomProbability(double randomProbability) {
+    if (randomProbability < 0 || randomProbability > 1)
+        throw std::invalid_argument("GreedyRandomSelector::setRandomProbability: probability must be in range [0, 1], got " + std::to_string(randomProbability));
+
     this->randomProbability = randomProbability;
 }
 

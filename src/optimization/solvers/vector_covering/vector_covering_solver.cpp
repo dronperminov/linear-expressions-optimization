@@ -30,23 +30,28 @@ void VectorCoveringSolver::setSelector(const ScoreSelector& selector) {
 size_t VectorCoveringSolver::solve() {
     initialize();
 
-    while (!uncovered.empty() && (!parameters.naiveFallback || steps.size() < naiveComplexity)) {
+    while (!uncovered.empty() && (!parameters.naiveFallback || steps.size() <= naiveComplexity)) {
         std::vector<Candidate> candidates = getCandidates();
         scorer->score(candidates, {uncovered, vectors}, scores);
         Candidate candidate = candidates[selector->selectIndex(scores)];
         addCandidate(candidate);
     }
 
-    if (parameters.naiveFallback && steps.size() >= naiveComplexity)
+    if (!uncovered.empty()) {
         fallbackToNaive();
-
-    if (parameters.removeUnused)
+    }
+    else if (parameters.removeUnused) {
         removeUnused();
+    }
 
+    solved = true;
     return steps.size();
 }
 
 Solution VectorCoveringSolver::getSolution() const {
+    if (!solved)
+        throw std::runtime_error("VectorCoveringSolver::getSolution: solution is not available yet, call solve() first");
+
     Solution solution;
     solution.dimension = dimension;
     solution.substitutions = steps;
@@ -58,7 +63,7 @@ Solution VectorCoveringSolver::getSolution() const {
     for (size_t i = 0; i < expressions.size(); i++) {
         Vector expression(expressions[i]);
 
-        size_t index = vector2index[expression];
+        size_t index = vector2index.at(expression);
         int value = vectors[index].compare(expression);
         solution.expressions.push_back({{index, value}});
     }
