@@ -193,6 +193,10 @@ void VectorCoveringSolver::removeUnused() {
 
     steps.erase(steps.begin() + j, steps.end());
     vectors.erase(vectors.begin() + dimension + j, vectors.end());
+    pool.clear();
+
+    for (size_t i = 0; i < vectors.size(); i++)
+        pool[vectors[i].getCanonized()] = i;
 }
 
 } // namespace leo::vector_covering
