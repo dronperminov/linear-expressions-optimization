@@ -16,7 +16,8 @@ SOLVERS = src/optimization/solvers/solver.o \
           src/optimization/solvers/cse/scorers/potential_scorer.o \
           src/optimization/solvers/cse/common_subexpression_solver.o
 
-UTILS = src/utils/solution_validator.o
+UTILS = src/utils/solution_validator.o \
+        src/utils/formatters/slp_formatter.o
 
 OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS) $(UTILS)
 

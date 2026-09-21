@@ -10,6 +10,9 @@
 // utils
 #include <leo/utils/solution_validator.h>
 
+// utils/formatters
+#include <leo/utils/formatters/slp_formatter.h>
+
 // selectors
 #include <leo/optimization/selection/greedy_alternative_selector.h>
 #include <leo/optimization/selection/greedy_random_selector.h>
