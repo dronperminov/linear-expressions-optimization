@@ -22,14 +22,15 @@ void DefaultScorer::score(const std::vector<Candidate>& candidates, const Contex
     for (size_t i = 0; i < candidates.size(); i++) {
         double score = 0.0;
 
+        const Vector& canonized = candidates[i].canonized;
         for (const Vector& target : context.uncovered) {
-            if (candidates[i].vector.compare(target)) {
+            if (canonized == target) {
                 score += coverWeight;
                 continue;
             }
 
-            size_t hamming = candidates[i].vector.getDimension() - candidates[i].vector.getHammingDistance(target);
-            size_t matches = candidates[i].vector.getMatchesCount(target);
+            size_t hamming = canonized.getDimension() - canonized.getHammingDistance(target);
+            size_t matches = canonized.getMatchesCount(target);
 
             score += hamming * hammingWeight;
             score += matches * matchesWeight;
@@ -45,18 +46,18 @@ void DefaultScorer::score(const std::vector<Candidate>& candidates, const Contex
 void DefaultScorer::addOneStepScores(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const {
     std::unordered_map<Vector, size_t> vector2index;
     for (size_t i = 0; i < candidates.size(); i++)
-        vector2index[candidates[i].vector] = i;
+        vector2index[candidates[i].canonized] = i;
 
     for (const Vector& target : context.uncovered) {
         std::unordered_set<size_t> indices;
 
         for (const Vector& vector : context.vectors) {
-            auto sub = vector2index.find(target - vector);
-            if (sub != vector2index.end() && candidates[sub->second].vector != target)
+            auto sub = vector2index.find((target - vector).getCanonized());
+            if (sub != vector2index.end() && candidates[sub->second].canonized != target)
                 indices.insert(sub->second);
 
-            auto add = vector2index.find(target + vector);
-            if (add != vector2index.end() && candidates[add->second].vector != target)
+            auto add = vector2index.find((target + vector).getCanonized());
+            if (add != vector2index.end() && candidates[add->second].canonized != target)
                 indices.insert(add->second);
         }
 

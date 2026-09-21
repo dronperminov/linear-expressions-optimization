@@ -2,13 +2,12 @@
 
 namespace leo {
 
-Vector::Vector(const std::vector<int>& values) : values(values), canonized(values.size()) {
-    canonize();
+Vector::Vector(const std::vector<int>& values) : values(values) {
+
 }
 
-Vector::Vector(size_t dimension, size_t index) : values(dimension, 0), canonized(dimension, 0) {
+Vector::Vector(size_t dimension, size_t index) : values(dimension, 0) {
     values[index] = 1;
-    canonized[index] = 1;
 }
 
 Vector Vector::operator+(const Vector& vector) const {
@@ -47,6 +46,21 @@ Vector Vector::operator*(int scale) const {
     return Vector(result);
 }
 
+Vector Vector::getCanonized() const {
+    Vector canonized(values);
+    canonized.canonize();
+    return canonized;
+}
+
+Vector Vector::addScaled(const Vector& vector, int scale) const {
+    std::vector<int> result(values.size());
+
+    for (size_t i = 0; i < values.size(); i++)
+        result[i] = values[i] + vector.values[i] * scale;
+
+    return Vector(result);
+}
+
 int Vector::operator[](size_t index) const {
     return values[index];
 }
@@ -54,14 +68,14 @@ int Vector::operator[](size_t index) const {
 size_t Vector::getHash() const {
     size_t hash = 0;
 
-    for (int value : canonized)
+    for (int value : values)
         hash ^= std::hash<int>{}(value) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
 
     return hash;
 }
 
 bool Vector::operator==(const Vector& vector) const {
-    return canonized == vector.canonized;
+    return values == vector.values;
 }
 
 bool Vector::operator!=(const Vector& vector) const {
@@ -79,11 +93,12 @@ bool Vector::operator<(const Vector& vector) const {
 int Vector::compare(const Vector& vector) const {
     if (values == vector.values)
         return 1;
-    
-    if (canonized == vector.canonized)
-        return -1;
 
-    return 0;
+    for (size_t i = 0; i < values.size(); i++)
+        if (values[i] != -vector.values[i])
+            return 0;
+
+    return -1;
 }
 
 size_t Vector::getDimension() const {
@@ -138,6 +153,15 @@ size_t Vector::getMatchesCount(const Vector& vector) const {
     return std::max(matches, inverse);
 }
 
+std::vector<size_t> Vector::getNonZeroIndices() const {
+    std::vector<size_t> indices;
+    for (size_t i = 0; i < values.size(); i++)
+        if (values[i])
+            indices.push_back(i);
+
+    return indices;
+}
+
 void Vector::canonize() {
     int sign = 1;
     bool first = false;
@@ -150,7 +174,7 @@ void Vector::canonize() {
             sign = value > 0 ? 1 : -1;
         }
 
-        canonized[i] = value * sign;
+        values[i] *= sign;
     }
 }
 

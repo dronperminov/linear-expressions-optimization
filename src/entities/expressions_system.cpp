@@ -84,6 +84,7 @@ size_t ExpressionsSystem::getAdditionsLowerBound(const std::vector<std::vector<i
 
     for (const std::vector<int>& expression : expressions) {
         Vector vector(expression);
+        vector.canonize();
 
         if (vector.getSupport() > 1)
             unique.insert(vector);

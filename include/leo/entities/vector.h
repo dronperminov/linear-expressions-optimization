@@ -7,7 +7,6 @@ namespace leo {
 
 class Vector {
     std::vector<int> values;
-    std::vector<int> canonized;
 public:
     Vector(const std::vector<int>& values);
     Vector(size_t dimension, size_t index);
@@ -16,6 +15,9 @@ public:
     Vector operator-(const Vector& vector) const;
     Vector operator-() const;
     Vector operator*(int scale) const;
+
+    Vector getCanonized() const;
+    Vector addScaled(const Vector& vector, int scale) const;
 
     int operator[](size_t index) const;
     size_t getHash() const;
@@ -30,7 +32,8 @@ public:
     int getMaxAbs() const;
     size_t getHammingDistance(const Vector& vector) const;
     size_t getMatchesCount(const Vector& vector) const;
-private:
+    std::vector<size_t> getNonZeroIndices() const;
+
     void canonize();
 };
 

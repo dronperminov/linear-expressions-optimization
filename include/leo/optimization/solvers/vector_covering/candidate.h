@@ -8,6 +8,7 @@ namespace leo::vector_covering {
 struct Candidate {
     Substitution step;
     Vector vector;
+    Vector canonized;
 };
 
 } // namespace leo::vector_covering
