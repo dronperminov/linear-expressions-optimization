@@ -31,13 +31,9 @@ void DefaultScorer::score(const std::vector<Candidate>& candidates, const Contex
                 continue;
             }
 
-            size_t hamming = canonized.getDimension() - canonized.getHammingDistance(target);
-            size_t matches = canonized.getMatchesCount(target);
-            int distance = canonized.getDistance(target);
-
-            score += hamming * hammingWeight;
-            score += matches * matchesWeight;
-            score += distance * distanceWeight;
+            score -= hammingWeight * canonized.getHammingDistance(target);
+            score += matchesWeight * canonized.getMatchesCount(target);
+            score -= distanceWeight * canonized.getDistance(target);
         }
 
         scores[i] = score;

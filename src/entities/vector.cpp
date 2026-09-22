@@ -123,7 +123,7 @@ int Vector::getMaxAbs() const {
     return max;
 }
 
-int Vector::getDistance(const Vector& vector) const {
+size_t Vector::getDistance(const Vector& vector) const {
     size_t distance = 0;
     size_t inverse = 0;
 
