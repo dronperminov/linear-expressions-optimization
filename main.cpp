@@ -109,7 +109,7 @@ int main() {
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
     vector_covering::DefaultScorer defaultScorer;
-    vector_covering::DefaultScorer customScorer(1000, 100, 5, 3);
+    vector_covering::DefaultScorer customScorer(1000, 100, 5, 3, 0);
 
     GreedySelector greedy;
     GreedyAlternativeSelector greedyAlternative(generator);

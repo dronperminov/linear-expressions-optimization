@@ -25,7 +25,7 @@ class VectorCoveringSolver : public Solver {
     size_t naiveComplexity;
     std::unordered_set<Vector> targets;
     std::unordered_set<Vector> uncovered;
-    std::unordered_set<Vector> pool;
+    std::unordered_map<Vector, size_t> pool;
     std::vector<Vector> vectors;
     std::vector<Substitution> steps;
     std::vector<double> scores;
