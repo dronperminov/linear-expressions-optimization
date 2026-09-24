@@ -38,10 +38,13 @@ void printSolution(const Solution& solution) {
     std::cout << "+ expressions:" << std::endl;
     for (const std::vector<Term>& terms : solution.expressions) {
         std::cout << "| ";
-        printTermFirst(terms[0].index, terms[0].value);
 
-        for (size_t i = 1; i < terms.size(); i++)
-            printTerm(terms[i].index, terms[i].value);
+        if (!terms.empty()) {
+            printTermFirst(terms[0].index, terms[0].value);
+
+            for (size_t i = 1; i < terms.size(); i++)
+                printTerm(terms[i].index, terms[i].value);
+        }
 
         std::cout << std::endl;
     }
@@ -63,6 +66,21 @@ void solve(const ExpressionsSystem& expressionsSystem, Solver& solver, const std
     if (showSolution)
         printSolution(solution);
 
+    std::cout << "       Solution additions: " << solution.getAdditions() << std::endl;
+
+    utils::SolutionTransposer transposer;
+    Solution transposed = transposer.transpose(solution);
+    utils::SolutionValidator validator;
+    if (!validator.validate(expressionsSystem.getTransposedExpressions(), transposed))
+        throw std::runtime_error("invalid transposed solution");
+
+    std::cout << "     Transposed additions: " << transposed.getAdditions() << std::endl;
+
+    Solution transposedBack = transposer.transpose(transposed);
+    if (!expressionsSystem.validateSolution(transposedBack))
+        throw std::runtime_error("invalid transposed back solution");
+
+    std::cout << "Transposed back additions: " << transposedBack.getAdditions() << std::endl;
     std::cout << std::endl;
 }
 
@@ -83,6 +101,7 @@ int main() {
         {0, 0, 1, 0, 0, 0, 0, 0, -1},
         {0, 0, 1, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 1, 1},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, -1, 0, 1, 1, 0, 0, 0},
         {0, 0, 1, 0, 0, -1, 0, 0, 0},
         {0, 0, 0, 0, 1, 1, 0, 0, 0},
@@ -90,7 +109,8 @@ int main() {
         {0, 0, 0, 0, 0, 1, 0, 0, 0},
         {0, 0, 0, 1, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 1}
+        {0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0}
     });
 
     int maxAbsValue = expressionsSystem.getMaxAbsValue();

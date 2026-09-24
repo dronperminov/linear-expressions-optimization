@@ -62,11 +62,22 @@ Solution VectorCoveringSolver::getSolution() const {
     solution.dimension = dimension;
     solution.substitutions = steps;
 
-    for (size_t i = 0; i < expressions.size(); i++) {
-        Vector expression(expressions[i]);
+    for (const std::vector<int>& expression : expressions) {
+        Vector vector(expression);
 
-        size_t index = pool.at(expression.getCanonized());
-        int value = vectors[index].compare(expression);
+        if (vector.isZero()) {
+            solution.expressions.push_back({});
+            continue;
+        }
+
+        if (vector.getSupport() == 1) {
+            size_t index = vector.getNonZeroIndex();
+            solution.expressions.push_back({{index, vector[index]}});
+            continue;
+        }
+
+        size_t index = pool.at(vector.getCanonized());
+        int value = vectors[index].compare(vector);
         solution.expressions.push_back({{index, value}});
     }
 

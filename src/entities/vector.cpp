@@ -6,6 +6,10 @@ Vector::Vector(const std::vector<int>& values) : values(values) {
 
 }
 
+Vector::Vector(size_t dimension) : values(dimension, 0) {
+
+}
+
 Vector::Vector(size_t dimension, size_t index) : values(dimension, 0) {
     values[index] = 1;
 }
@@ -46,6 +50,27 @@ Vector Vector::operator*(int scale) const {
     return Vector(result);
 }
 
+Vector& Vector::operator+=(const Vector& vector) {
+    for (size_t i = 0; i < values.size(); i++)
+        values[i] += vector.values[i];
+
+    return *this;
+}
+
+Vector& Vector::operator-=(const Vector& vector) {
+    for (size_t i = 0; i < values.size(); i++)
+        values[i] -= vector.values[i];
+
+    return *this;
+}
+
+Vector& Vector::operator*=(int scale) {
+    for (size_t i = 0; i < values.size(); i++)
+        values[i] *= scale;
+
+    return *this;
+}
+
 Vector Vector::getCanonized() const {
     Vector canonized(values);
     canonized.canonize();
@@ -62,6 +87,10 @@ Vector Vector::addScaled(const Vector& vector, int scale) const {
 }
 
 int Vector::operator[](size_t index) const {
+    return values[index];
+}
+
+int& Vector::operator[](size_t index) {
     return values[index];
 }
 
@@ -172,6 +201,31 @@ std::vector<size_t> Vector::getNonZeroIndices() const {
             indices.push_back(i);
 
     return indices;
+}
+
+size_t Vector::getNonZeroIndex() const {
+    for (size_t i = 0; i < values.size(); i++)
+        if (values[i])
+            return i;
+
+    throw std::runtime_error("Vector::getNonZeroIndex: vector is zero");
+}
+
+bool Vector::isZero() const {
+    for (int value : values)
+        if (value)
+            return false;
+
+    return true;
+}
+
+bool Vector::isOneHot() const {
+    int sum = 0;
+
+    for (int value : values)
+        sum += std::abs(value);
+
+    return sum == 1;
 }
 
 void Vector::canonize() {

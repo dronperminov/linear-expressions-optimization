@@ -2,6 +2,7 @@ CXX = g++
 FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp -Iinclude
 
 ENTITIES = src/entities/vector.o \
+           src/entities/solution.o \
            src/entities/expressions_system.o
 
 SELECTORS = src/optimization/selection/score_selector.o \
@@ -17,6 +18,7 @@ SOLVERS = src/optimization/solvers/solver.o \
           src/optimization/solvers/cse/common_subexpression_solver.o
 
 UTILS = src/utils/solution_validator.o \
+        src/utils/solution_transposer.o \
         src/utils/formatters/slp_formatter.o
 
 OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS) $(UTILS)

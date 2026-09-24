@@ -11,6 +11,8 @@ struct Solution {
     size_t dimension;
     std::vector<Substitution> substitutions;
     std::vector<std::vector<Term>> expressions;
+
+    size_t getAdditions() const;
 };
 
 } // namespace leo
