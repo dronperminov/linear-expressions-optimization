@@ -22,9 +22,17 @@ UTILS = src/utils/solution_validator.o \
         src/utils/solution_transposer.o \
         src/utils/formatters/slp_formatter.o
 
-OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS) $(UTILS)
+CLI = src/cli/arg_parser.o
 
-all: main
+IO = src/io/expressions_reader.o
+
+LIB_OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS) $(UTILS)
+OBJECTS = $(LIB_OBJECTS) $(CLI) $(IO)
+
+all: main reduce
+
+reduce: $(OBJECTS)
+	$(CXX) $(FLAGS) $(OBJECTS) reduce.cpp -o reduce
 
 main: $(OBJECTS)
 	$(CXX) $(FLAGS) $(OBJECTS) main.cpp -o main

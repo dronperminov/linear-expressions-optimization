@@ -79,6 +79,14 @@ bool ExpressionsSystem::validateSolution(const Solution& solution) const {
     return valid;
 }
 
+void ExpressionsSystem::describe(std::ostream& os) const {
+    os << "- variables: " << getVariablesCount() << std::endl;
+    os << "- expressions: " << getExpressionsCount() << std::endl;
+    os << "- max abs value: " << getMaxAbsValue() << std::endl;
+    os << "- naive additions: " << getNaiveAdditions() << std::endl;
+    os << "- lower bound: " << getAdditionsLowerBound() << std::endl;
+}
+
 size_t ExpressionsSystem::getAdditionsLowerBound(const std::vector<std::vector<int>>& expressions) const {
     std::unordered_set<Vector> unique;
 

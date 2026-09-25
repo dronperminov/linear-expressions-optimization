@@ -88,11 +88,7 @@ void test(const ExpressionsSystem& expressionsSystem, std::mt19937& generator) {
     int maxAbsValue = expressionsSystem.getMaxAbsValue();
 
     std::cout << "Initial system:" << std::endl;
-    std::cout << "- variables: " << expressionsSystem.getVariablesCount() << std::endl;
-    std::cout << "- expressions: " << expressionsSystem.getExpressionsCount() << std::endl;
-    std::cout << "- max abs value: " << maxAbsValue << std::endl;
-    std::cout << "- naive additions: " << expressionsSystem.getNaiveAdditions() << std::endl;
-    std::cout << "- lower bound: " << expressionsSystem.getAdditionsLowerBound() << std::endl;
+    expressionsSystem.describe(std::cout);
     std::cout << std::endl;
 
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
