@@ -2,6 +2,7 @@ CXX = g++
 FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp -Iinclude
 
 ENTITIES = src/entities/vector.o \
+           src/entities/vector_index.o \
            src/entities/solution.o \
            src/entities/expressions_system.o
 

@@ -84,35 +84,7 @@ void solve(const ExpressionsSystem& expressionsSystem, Solver& solver, const std
     std::cout << std::endl;
 }
 
-int main() {
-    ExpressionsSystem expressionsSystem({
-        {1, 1, 1, -1, -1, 0, 0, -1, -1},
-        {1, 0, 0, -1, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 1, 0, 0, 0, 0},
-        {-1, 0, 0, 1, 1, 0, 0, 0, 0},
-        {0, 0, 0, 1, 1, 0, 0, 0, 0},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0},
-        {-1, 0, 0, 0, 0, 0, 1, 1, 0},
-        {-1, 0, 0, 0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 0, 0, 0, 1, 1, 0},
-        {1, 1, 1, 0, -1, -1, -1, -1, 0},
-        {0, 0, 0, 0, 0, 0, 0, 1, 0},
-        {0, 0, -1, 0, 0, 0, 0, 1, 1},
-        {0, 0, 1, 0, 0, 0, 0, 0, -1},
-        {0, 0, 1, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 1, 1},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, -1, 0, 1, 1, 0, 0, 0},
-        {0, 0, 1, 0, 0, -1, 0, 0, 0},
-        {0, 0, 0, 0, 1, 1, 0, 0, 0},
-        {0, 1, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 1, 0, 0, 0},
-        {0, 0, 0, 1, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 1},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0}
-    });
-
+void test(const ExpressionsSystem& expressionsSystem, std::mt19937& generator) {
     int maxAbsValue = expressionsSystem.getMaxAbsValue();
 
     std::cout << "Initial system:" << std::endl;
@@ -122,9 +94,6 @@ int main() {
     std::cout << "- naive additions: " << expressionsSystem.getNaiveAdditions() << std::endl;
     std::cout << "- lower bound: " << expressionsSystem.getAdditionsLowerBound() << std::endl;
     std::cout << std::endl;
-
-    int seed = time(0);
-    std::mt19937 generator(seed);
 
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
@@ -159,6 +128,59 @@ int main() {
 
     cse.setSelector(greedyRandom);
     solve(expressionsSystem, cse, "cse: default, greedy-random", true);
+}
+
+ExpressionsSystem generateSystem(int count, int dimension, const std::vector<int>& values, std::mt19937& generator) {
+    std::vector<std::vector<int>> expressions(count, std::vector<int>(dimension, 0));
+
+    for (int i = 0; i < count; i++)
+        for (int j = 0; j < dimension; j++)
+            expressions[i][j] = values[generator() % 3];
+
+    return ExpressionsSystem(expressions);
+}
+
+int main() {
+    int seed = time(0);
+    std::mt19937 generator(seed);
+
+    for (int i = 0; i < 100; i++) {
+        int count = 1 + generator() % 25;
+        int dimension = 1 + generator() % 10;
+
+        ExpressionsSystem expressionsSystem = generateSystem(count, dimension, {-1, 0, 1}, generator);
+        test(expressionsSystem, generator);
+    }
+
+    ExpressionsSystem expressionsSystem({
+        {1, 1, 1, -1, -1, 0, 0, -1, -1},
+        {1, 0, 0, -1, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0},
+        {-1, 0, 0, 1, 1, 0, 0, 0, 0},
+        {0, 0, 0, 1, 1, 0, 0, 0, 0},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0},
+        {-1, 0, 0, 0, 0, 0, 1, 1, 0},
+        {-1, 0, 0, 0, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 1, 1, 0},
+        {1, 1, 1, 0, -1, -1, -1, -1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, -1, 0, 0, 0, 0, 1, 1},
+        {0, 0, 1, 0, 0, 0, 0, 0, -1},
+        {0, 0, 1, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 1},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, -1, 0, 1, 1, 0, 0, 0},
+        {0, 0, 1, 0, 0, -1, 0, 0, 0},
+        {0, 0, 0, 0, 1, 1, 0, 0, 0},
+        {0, 1, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0}
+    });
+
+    test(expressionsSystem, generator);
 
     return 0;
 }

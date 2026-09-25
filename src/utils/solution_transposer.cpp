@@ -5,24 +5,23 @@ namespace leo::utils {
 Solution SolutionTransposer::transpose(const Solution& solution) const {
     size_t dimensionT = solution.expressions.size();
 
-    std::vector<Vector> vectors, vectorsT;
-    std::unordered_map<Vector, size_t> vector2index, vector2indexT;
+    VectorIndex vectors(solution.dimension);
+    VectorIndex vectorsT(dimensionT);
 
-    initializeBasisVectors(solution.dimension, vectors, vector2index);
-    initializeBasisVectors(dimensionT, vectorsT, vector2indexT);
-    initializeVectors(solution.substitutions, vectors, vector2index);
+    for (const Substitution& substitution : solution.substitutions)
+        vectors.add(substitution);
 
     std::vector<Substitution> substitutions = solution.substitutions;
     std::vector<Substitution> substitutionsT;
-    std::vector<Vector> outputs = initializeOutputs(solution, vectors, vector2index, substitutions);
+    std::vector<Vector> outputs = initializeOutputs(solution, vectors, substitutions);
     std::vector<std::optional<Term>> accumulators(vectors.size(), std::nullopt);
 
     for (size_t i = 0; i < outputs.size(); i++) {
         if (outputs[i].isZero())
             continue;
 
-        Term term = getVectorTerm(outputs[i], vectors, vector2index);
-        accumulators[term.index] = merge(accumulators[term.index], {i, term.value}, substitutionsT, vectorsT, vector2indexT, dimensionT);
+        Term term = getVectorTerm(outputs[i], vectors);
+        accumulators[term.index] = merge(accumulators[term.index], {i, term.value}, substitutionsT, vectorsT, dimensionT);
     }
 
     for (size_t i = 0; i < substitutions.size(); i++) {
@@ -32,39 +31,15 @@ Solution SolutionTransposer::transpose(const Solution& solution) const {
         Substitution s = substitutions[substitutions.size() - 1 - i];
         Term src = *accumulators[accumulators.size() - 1 - i];
 
-        accumulators[s.i] = merge(accumulators[s.i], {src.index, src.value * s.ai}, substitutionsT, vectorsT, vector2indexT, dimensionT);
-        accumulators[s.j] = merge(accumulators[s.j], {src.index, src.value * s.aj}, substitutionsT, vectorsT, vector2indexT, dimensionT);
+        accumulators[s.i] = merge(accumulators[s.i], {src.index, src.value * s.ai}, substitutionsT, vectorsT, dimensionT);
+        accumulators[s.j] = merge(accumulators[s.j], {src.index, src.value * s.aj}, substitutionsT, vectorsT, dimensionT);
     }
 
-    std::vector<std::vector<Term>> expressionsT = getExpressions(outputs, vectorsT, vector2indexT, solution.dimension, dimensionT);
+    std::vector<std::vector<Term>> expressionsT = getExpressions(outputs, vectorsT, solution.dimension, dimensionT);
     return {dimensionT, substitutionsT, expressionsT};
 }
 
-void SolutionTransposer::initializeBasisVectors(size_t dimension, std::vector<Vector>& vectors, std::unordered_map<Vector, size_t>& vector2index) const {
-    for (size_t i = 0; i < dimension; i++) {
-        Vector basis(dimension, i);
-        vector2index[basis.getCanonized()] = i;
-        vectors.emplace_back(basis);
-    }
-}
-
-void SolutionTransposer::initializeVectors(const std::vector<Substitution>& substitutions, std::vector<Vector>& vectors, std::unordered_map<Vector, size_t>& vector2index) const {
-    for (const Substitution& s : substitutions) {
-        if (s.i >= vectors.size() || s.j >= vectors.size())
-            throw std::runtime_error("SolutionTransposer::initializeVectors: substitution uses future steps");
-
-        Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
-        Vector canonized = vector.getCanonized();
-
-        if (vector2index.find(canonized) != vector2index.end())
-            throw std::runtime_error("SolutionTransposer::initializeVectors: substitutions produce duplicate vectors");
-
-        vector2index[canonized] = vector2index.size();
-        vectors.emplace_back(vector);
-    }
-}
-
-std::vector<Vector> SolutionTransposer::initializeOutputs(const Solution& solution, std::vector<Vector>& vectors, std::unordered_map<Vector, size_t>& vector2index, std::vector<Substitution>& substitutions) const {
+std::vector<Vector> SolutionTransposer::initializeOutputs(const Solution& solution, VectorIndex& vectors, std::vector<Substitution>& substitutions) const {
     std::vector<Vector> outputs;
 
     for (const std::vector<Term>& expression : solution.expressions) {
@@ -79,20 +54,17 @@ std::vector<Vector> SolutionTransposer::initializeOutputs(const Solution& soluti
             Term curr = expression[index];
 
             Vector vector = vectors[prev.index] * prev.value + vectors[curr.index] * curr.value;
-            Vector canonized = vector.getCanonized();
+            std::pair<size_t, bool> result = vectors.getOrAdd(vector);
 
-            auto result = vector2index.find(canonized);
-            if (result == vector2index.end()) {
+            if (result.second) {
                 substitutions.push_back({prev.index, curr.index, prev.value, curr.value});
-                vectors.emplace_back(vector);
-                vector2index[canonized] = vector2index.size();
-                prev.index = vectors.size() - 1;
+                prev.index = result.first;
+                prev.value = 1;
             }
             else {
-                prev.index = result->second;
+                prev.index = result.first;
+                prev.value = vectors[prev.index].compare(vector);
             }
-
-            prev.value = 1;
         }
 
         outputs.emplace_back(vectors[prev.index] * prev.value);
@@ -101,7 +73,7 @@ std::vector<Vector> SolutionTransposer::initializeOutputs(const Solution& soluti
     return outputs;
 }
 
-std::optional<Term> SolutionTransposer::merge(const std::optional<Term>& accumulator, const Term& src, std::vector<Substitution>& substitutions, std::vector<Vector>& vectors, std::unordered_map<Vector, size_t>& vector2index, size_t dimension) const {
+std::optional<Term> SolutionTransposer::merge(const std::optional<Term>& accumulator, const Term& src, std::vector<Substitution>& substitutions, VectorIndex& vectors, size_t dimension) const {
     if (!accumulator)
         return Term{src.index, src.value};
 
@@ -121,30 +93,27 @@ std::optional<Term> SolutionTransposer::merge(const std::optional<Term>& accumul
     if (vector.isZero())
         return std::nullopt;
 
-    Vector canonized = vector.getCanonized();
-    if (vector.getSupport() == 1 || vector2index.find(canonized) != vector2index.end())
-        return getVectorTerm(vector, vectors, vector2index);
+    if (vector.getSupport() == 1 || vectors.contains(vector))
+        return getVectorTerm(vector, vectors);
 
     substitutions.push_back({i, j, ai, aj});
-    vector2index[canonized] = vector2index.size();
-    vectors.emplace_back(vector);
+    vectors.add(vector);
 
     return Term{dimension + substitutions.size() - 1, 1};
 }
 
-Term SolutionTransposer::getVectorTerm(const Vector& vector, const std::vector<Vector>& vectors, const std::unordered_map<Vector, size_t>& vector2index) const {
+Term SolutionTransposer::getVectorTerm(const Vector& vector, const VectorIndex& vectors) const {
     if (vector.getSupport() == 1) {
         size_t index = vector.getNonZeroIndex();
         return {index, vector[index]};
     }
 
-    Vector canonized = vector.getCanonized();
-    size_t index = vector2index.at(canonized);
+    size_t index = vectors.getIndex(vector);
     int value = vector.compare(vectors[index]);
     return {index, value};
 }
 
-std::vector<std::vector<Term>> SolutionTransposer::getExpressions(const std::vector<Vector>& outputs, const std::vector<Vector>& vectors, const std::unordered_map<Vector, size_t>& vector2index, size_t dimension, size_t dimensionT) const {
+std::vector<std::vector<Term>> SolutionTransposer::getExpressions(const std::vector<Vector>& outputs, const VectorIndex& vectors, size_t dimension, size_t dimensionT) const {
     std::vector<std::vector<Term>> expressions;
     for (size_t i = 0; i < dimension; i++) {
         Vector target(dimensionT);
@@ -157,11 +126,11 @@ std::vector<std::vector<Term>> SolutionTransposer::getExpressions(const std::vec
             continue;
         }
 
-        Term term = getVectorTerm(target, vectors, vector2index);
+        Term term = getVectorTerm(target, vectors);
         expressions.push_back({term});
     }
 
     return expressions;
 }
 
-}
+} // namespace leo
