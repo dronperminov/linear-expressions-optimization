@@ -22,9 +22,16 @@ void SlpFormatter::format(std::ostream& os, const Solution& solution) const {
         const std::vector<Term>& expression = solution.expressions[i];
 
         os << outputVarName << i << ":=";
-        formatTermFirst(os, expression[0].index, expression[0].value, solution.dimension);
-        for (size_t j = 1; j < expression.size(); j++)
-            formatTerm(os, expression[j].index, expression[j].value, solution.dimension);
+
+        if (expression.empty()) {
+            os << "0";
+        }
+        else {
+            formatTermFirst(os, expression[0].index, expression[0].value, solution.dimension);
+            for (size_t j = 1; j < expression.size(); j++)
+                formatTerm(os, expression[j].index, expression[j].value, solution.dimension);
+        }
+
         os << ";" << std::endl;
     }
 }

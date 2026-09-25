@@ -104,11 +104,14 @@ size_t CommonSubexpressionSolver::getAdditions() const {
     size_t additions = substitutions.size();
 
     for (size_t i = 0; i < matrix.size(); i++) {
+        size_t nonZeros = 0;
+
         for (size_t j = 0; j < variables; j++)
             if (matrix[i][j])
-                additions++;
+                nonZeros++;
 
-        additions--;
+        if (nonZeros)
+            additions += nonZeros - 1;
     }
 
     return additions;

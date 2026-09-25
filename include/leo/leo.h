@@ -9,6 +9,7 @@
 
 // utils
 #include <leo/utils/solution_validator.h>
+#include <leo/utils/solution_transposer.h>
 
 // utils/formatters
 #include <leo/utils/formatters/slp_formatter.h>
