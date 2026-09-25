@@ -68,7 +68,7 @@ std::vector<Vector> SolutionTransposer::initializeOutputs(const Solution& soluti
     std::vector<Vector> outputs;
 
     for (const std::vector<Term>& expression : solution.expressions) {
-        if (expression.size() == 0) {
+        if (expression.empty()) {
             outputs.emplace_back(Vector(solution.dimension));
             continue;
         }
