@@ -1,18 +1,16 @@
-#include <leo/utils/formatters/slp_formatter.h>
+#include <leo/formatters/slp_solution_formatter.h>
 
-namespace leo::utils::formatters {
+namespace leo {
 
-SlpFormatter::SlpFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName) {
-    this->inputVarName = inputVarName;
-    this->outputVarName = outputVarName;
-    this->newVarName = newVarName;
+SlpSolutionFormatter::SlpSolutionFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName, size_t start) : SolutionFormatter(inputVarName, outputVarName, newVarName, start) {
+
 }
 
-void SlpFormatter::format(std::ostream& os, const Solution& solution) const {
+void SlpSolutionFormatter::format(std::ostream& os, const Solution& solution) const {
     for (size_t i = 0; i < solution.substitutions.size(); i++) {
         Substitution s = solution.substitutions[i];
 
-        os << newVarName << i << ":=";
+        os << index2variable(solution.dimension + i, solution.dimension) << ":=";
         formatTermFirst(os, s.i, s.ai, solution.dimension);
         formatTerm(os, s.j, s.aj, solution.dimension);
         os << ";" << std::endl;
@@ -21,7 +19,7 @@ void SlpFormatter::format(std::ostream& os, const Solution& solution) const {
     for (size_t i = 0; i < solution.expressions.size(); i++) {
         const std::vector<Term>& expression = solution.expressions[i];
 
-        os << outputVarName << i << ":=";
+        os << outputVarName << (i + start) << ":=";
 
         if (expression.empty()) {
             os << "0";
@@ -36,20 +34,7 @@ void SlpFormatter::format(std::ostream& os, const Solution& solution) const {
     }
 }
 
-std::string SlpFormatter::index2variable(size_t index, size_t dimension) const {
-    std::stringstream ss;
-
-    if (index < dimension) {
-        ss << inputVarName << index;
-    }
-    else {
-        ss << newVarName << (index - dimension);
-    }
-
-    return ss.str();
-}
-
-void SlpFormatter::formatTermFirst(std::ostream& os, size_t index, int value, size_t dimension) const {
+void SlpSolutionFormatter::formatTermFirst(std::ostream& os, size_t index, int value, size_t dimension) const {
     if (value == -1) {
         os << "-";
     }
@@ -60,7 +45,7 @@ void SlpFormatter::formatTermFirst(std::ostream& os, size_t index, int value, si
     os << index2variable(index, dimension);
 }
 
-void SlpFormatter::formatTerm(std::ostream& os, size_t index, int value, size_t dimension) const {
+void SlpSolutionFormatter::formatTerm(std::ostream& os, size_t index, int value, size_t dimension) const {
     os << (value > 0 ? "+" : "-");
 
     if (value > 1 || value < -1)
@@ -69,4 +54,4 @@ void SlpFormatter::formatTerm(std::ostream& os, size_t index, int value, size_t 
     os << index2variable(index, dimension);
 }
 
-} // namespace leo::utils::formatters
+} // namespace leo

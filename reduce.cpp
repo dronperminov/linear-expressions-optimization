@@ -1,4 +1,6 @@
 #include <iostream>
+#include <filesystem>
+#include <memory>
 #include <random>
 #include <vector>
 #include <leo/leo.h>
@@ -62,18 +64,38 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& genera
     return solution;
 }
 
+std::unique_ptr<SolutionFormatter> getFormatter(const std::string& outputPath, const std::string& format) {
+    std::string detectedFormat = format;
+
+    if (format == "auto") {
+        std::string extension = std::filesystem::path(outputPath).extension().string();
+        detectedFormat = extension.empty() ? "" : extension.substr(1);
+    }
+
+    if (detectedFormat == "slp" )
+        return std::make_unique<SlpSolutionFormatter>("i", "o", "t", 0);
+
+    if (detectedFormat == "txt")
+        return std::make_unique<PlainTextSolutionFormatter>("x", "y", "x", 1);
+
+    throw std::runtime_error("invalid formatter type \"" + detectedFormat + "\"");
+}
+
 int main(int argc, char** argv) {
-    ArgParser parser("reduce", "");
+    ArgParser parser("reduce", "Minimize the number of additions and subtractions required to evaluate a system of linear expressions.");
 
     parser.addSection("Input / output");
-    parser.add("--input-path", "-i", ArgType::Path, "Path to input file with expressions", "", true);
-    parser.add("--output-path", "-o", ArgType::Path, "Path to output file", "output.slp");
+    parser.add("--input-path", "-i", ArgType::Path, "Path to the input file containing linear expressions", "", true);
+    parser.add("--output-path", "-o", ArgType::Path, "Path to the output file for the resulting solution", "output.txt");
 
-    parser.addSection("Other parameters");
-    parser.add("--seed", ArgType::Natural, "Random seed, 0 uses time-based seed", "0");
-    parser.add("--vec-iterations", ArgType::Natural, "Iterations of vector covering based solver", "10");
-    parser.add("--cse-iterations", ArgType::Natural, "Iterations of common subexpression solver", "100");
-    parser.add("--validate", ArgType::Flag, "Validate solution");
+    parser.addSection("Optimization");
+    parser.add("--seed", ArgType::Natural, "Random seed; 0 uses a time-based seed", "0");
+    parser.add("--vec-iterations", ArgType::Natural, "Number of iterations of the vector covering solver", "10");
+    parser.add("--cse-iterations", ArgType::Natural, "Number of iterations of the common subexpression solver", "100");
+
+    parser.addSection("Solution");
+    parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
+    parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "auto"}, "auto");
 
     if (!parser.parse(argc, argv))
         return 0;
@@ -87,8 +109,11 @@ int main(int argc, char** argv) {
     int vecIterations = std::stoi(parser["--vec-iterations"]);
     int cseIterations = std::stoi(parser["--cse-iterations"]);
     bool validate = parser.isSet("--validate");
+    std::string format = parser["--format"];
 
     try {
+        std::unique_ptr<SolutionFormatter> formatter = getFormatter(outputPath, format);
+
         ExpressionsReader reader;
         ExpressionsSystem expressionsSystem = reader.read(inputPath);
 
@@ -107,16 +132,15 @@ int main(int argc, char** argv) {
 
         std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
 
-        utils::formatters::SlpFormatter formatter;
         std::ofstream fout(outputPath);
-        formatter.format(fout, solution);
+        formatter->format(fout, solution);
         fout.close();
 
         std::cout << "Solution saved to \"" << outputPath << "\"" << std::endl;
     }
     catch (const std::exception& exception) {
         std::cerr << "Error: " << exception.what() << std::endl;
-        return 1;
+        return -1;
     }
 
     return 0;

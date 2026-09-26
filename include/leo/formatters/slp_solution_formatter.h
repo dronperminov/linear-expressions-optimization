@@ -8,21 +8,18 @@
 #include <leo/entities/solution.h>
 #include <leo/entities/substitution.h>
 #include <leo/entities/term.h>
+#include <leo/formatters/solution_formatter.h>
 
-namespace leo::utils::formatters {
+namespace leo {
 
-class SlpFormatter {
-    std::string inputVarName;
-    std::string outputVarName;
-    std::string newVarName;
+class SlpSolutionFormatter : public SolutionFormatter {
 public:
-    SlpFormatter(const std::string& inputVarName = "i", const std::string& outputVarName = "o", const std::string& newVarName = "t");
+    SlpSolutionFormatter(const std::string& inputVarName = "i", const std::string& outputVarName = "o", const std::string& newVarName = "t", size_t start = 0);
 
     void format(std::ostream& os, const Solution& solution) const;
 private:
-    std::string index2variable(size_t index, size_t dimension) const;
     void formatTermFirst(std::ostream& os, size_t index, int value, size_t dimension) const;
     void formatTerm(std::ostream& os, size_t index, int value, size_t dimension) const;
 };
 
-} // namespace leo::utils::formatters
+} // namespace leo

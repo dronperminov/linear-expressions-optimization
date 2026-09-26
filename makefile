@@ -18,15 +18,18 @@ SOLVERS = src/optimization/solvers/solver.o \
           src/optimization/solvers/cse/scorers/potential_scorer.o \
           src/optimization/solvers/cse/common_subexpression_solver.o
 
+FORMATTERS = src/formatters/solution_formatter.o \
+             src/formatters/plain_text_solution_formatter.o \
+             src/formatters/slp_solution_formatter.o
+
 UTILS = src/utils/solution_validator.o \
-        src/utils/solution_transposer.o \
-        src/utils/formatters/slp_formatter.o
+        src/utils/solution_transposer.o
 
 CLI = src/cli/arg_parser.o
 
 IO = src/io/expressions_reader.o
 
-LIB_OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS) $(UTILS)
+LIB_OBJECTS = $(ENTITIES) $(SELECTORS) $(SOLVERS) $(FORMATTERS) $(UTILS)
 OBJECTS = $(LIB_OBJECTS) $(CLI) $(IO)
 
 all: main reduce
