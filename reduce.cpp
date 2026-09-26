@@ -31,8 +31,8 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& genera
 
     for (int i = 1; i < vecIterations && lowerBound < bestAdditions; i++) {
         vec.setScorer(vecScorers[generator() % vecScorers.size()]);
-        size_t additions = vec.solve();
 
+        size_t additions = vec.solve();
         if (additions < bestAdditions) {
             bestAdditions = additions;
             solution = vec.getSolution();
@@ -89,7 +89,8 @@ int main(int argc, char** argv) {
     bool validate = parser.isSet("--validate");
 
     try {
-        ExpressionsSystem expressionsSystem = ExpressionsReader::read(inputPath);
+        ExpressionsReader reader;
+        ExpressionsSystem expressionsSystem = reader.read(inputPath);
 
         std::cout << "Readed system from \"" << inputPath << "\"" << std::endl;
         expressionsSystem.describe(std::cout);
