@@ -279,7 +279,7 @@ void ArgParser::help() const {
         std::cout << std::endl << section << ":" << std::endl;
 
         for (const auto &argument : section2args.at(section)) {
-            std::cout << std::left << std::setw(maxArgWidth + 2) << argument->getHelpName();
+            std::cout << "  " << std::left << std::setw(maxArgWidth + 2) << argument->getHelpName();
             std::cout << argument->getHelpDescription();
             std::cout << std::endl;
         }
