@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
     parser.add("--output-path", "-o", ArgType::Path, "Path to the output file for the resulting solution", "output.txt");
 
     parser.addSection("Optimization");
-    parser.add("--seed", ArgType::Natural, "Random seed; 0 uses a time-based seed", "0");
+    parser.add("--seed", ArgType::UInt, "Random seed; 0 uses a time-based seed", "0");
     parser.add("--vec-iterations", ArgType::Natural, "Number of iterations of the vector covering solver", "10");
     parser.add("--cse-iterations", ArgType::Natural, "Number of iterations of the common subexpression solver", "100");
 
