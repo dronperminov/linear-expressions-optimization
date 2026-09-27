@@ -25,7 +25,7 @@ FORMATTERS = src/formatters/json_solution_formatter.o \
 UTILS = src/utils/solution_validator.o \
         src/utils/solution_transposer.o
 
-CLI = src/cli/arg_parser.o
+CLI = src/cli/argument.o src/cli/arg_parser.o
 
 IO = src/io/expressions_reader.o
 
