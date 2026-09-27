@@ -2,12 +2,19 @@
 
 namespace leo {
 
-PlainTextSolutionFormatter::PlainTextSolutionFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName, size_t start) : SolutionFormatter(inputVarName, outputVarName, newVarName, start) {
-
+PlainTextSolutionFormatter::PlainTextSolutionFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName, size_t start) {
+    this->inputVarName = inputVarName;
+    this->outputVarName = outputVarName;
+    this->newVarName = newVarName;
+    this->start = start;
 }
 
 void PlainTextSolutionFormatter::format(std::ostream& os, const Solution& solution) const {
-    os << "# substitutions" << std::endl;
+    os << "# " << solution.getAdditions() << " additions" << std::endl;
+
+    if (!solution.substitutions.empty())
+        os << "# substitutions" << std::endl;
+
     for (size_t i = 0; i < solution.substitutions.size(); i++) {
         Substitution s = solution.substitutions[i];
 
@@ -36,6 +43,19 @@ void PlainTextSolutionFormatter::format(std::ostream& os, const Solution& soluti
 
         os << std::endl;
     }
+}
+
+std::string PlainTextSolutionFormatter::index2variable(size_t index, size_t dimension) const {
+    std::ostringstream ss;
+
+    if (index < dimension || inputVarName == newVarName) {
+        ss << inputVarName << (index + start);
+    }
+    else {
+        ss << newVarName << (index - dimension + start);
+    }
+
+    return ss.str();
 }
 
 void PlainTextSolutionFormatter::formatTermFirst(std::ostream& os, size_t index, int value, size_t dimension) const {

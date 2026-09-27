@@ -9,6 +9,7 @@
 
 // formatters
 #include <leo/formatters/solution_formatter.h>
+#include <leo/formatters/json_solution_formatter.h>
 #include <leo/formatters/plain_text_solution_formatter.h>
 #include <leo/formatters/slp_solution_formatter.h>
 

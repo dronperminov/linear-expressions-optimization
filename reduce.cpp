@@ -78,6 +78,9 @@ std::unique_ptr<SolutionFormatter> getFormatter(const std::string& outputPath, c
     if (detectedFormat == "txt")
         return std::make_unique<PlainTextSolutionFormatter>("x", "y", "x", 1);
 
+    if (detectedFormat == "json")
+        return std::make_unique<JsonSolutionFormatter>();
+
     throw std::runtime_error("invalid formatter type \"" + detectedFormat + "\"");
 }
 
@@ -95,7 +98,7 @@ int main(int argc, char** argv) {
 
     parser.addSection("Solution");
     parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
-    parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "auto"}, "auto");
+    parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "json", "auto"}, "auto");
 
     if (!parser.parse(argc, argv))
         return 0;

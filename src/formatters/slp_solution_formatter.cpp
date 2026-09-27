@@ -2,8 +2,11 @@
 
 namespace leo {
 
-SlpSolutionFormatter::SlpSolutionFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName, size_t start) : SolutionFormatter(inputVarName, outputVarName, newVarName, start) {
-
+SlpSolutionFormatter::SlpSolutionFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName, size_t start) {
+    this->inputVarName = inputVarName;
+    this->outputVarName = outputVarName;
+    this->newVarName = newVarName;
+    this->start = start;
 }
 
 void SlpSolutionFormatter::format(std::ostream& os, const Solution& solution) const {
@@ -32,6 +35,19 @@ void SlpSolutionFormatter::format(std::ostream& os, const Solution& solution) co
 
         os << ";" << std::endl;
     }
+}
+
+std::string SlpSolutionFormatter::index2variable(size_t index, size_t dimension) const {
+    std::ostringstream ss;
+
+    if (index < dimension || inputVarName == newVarName) {
+        ss << inputVarName << (index + start);
+    }
+    else {
+        ss << newVarName << (index - dimension + start);
+    }
+
+    return ss.str();
 }
 
 void SlpSolutionFormatter::formatTermFirst(std::ostream& os, size_t index, int value, size_t dimension) const {

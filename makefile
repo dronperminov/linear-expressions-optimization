@@ -18,7 +18,7 @@ SOLVERS = src/optimization/solvers/solver.o \
           src/optimization/solvers/cse/scorers/potential_scorer.o \
           src/optimization/solvers/cse/common_subexpression_solver.o
 
-FORMATTERS = src/formatters/solution_formatter.o \
+FORMATTERS = src/formatters/json_solution_formatter.o \
              src/formatters/plain_text_solution_formatter.o \
              src/formatters/slp_solution_formatter.o
 
