@@ -68,9 +68,9 @@ void solve(const ExpressionsSystem& expressionsSystem, Solver& solver, const std
 
     std::cout << "       Solution additions: " << solution.getAdditions() << std::endl;
 
-    utils::SolutionTransposer transposer;
+    SolutionTransposer transposer;
     Solution transposed = transposer.transpose(solution);
-    utils::SolutionValidator validator;
+    SolutionValidator validator;
     if (!validator.validate(expressionsSystem.getTransposedExpressions(), transposed))
         throw std::runtime_error("invalid transposed solution");
 

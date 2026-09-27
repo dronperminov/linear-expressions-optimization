@@ -74,7 +74,7 @@ bool ExpressionsSystem::validateVariablesCount() const {
 }
 
 bool ExpressionsSystem::validateSolution(const Solution& solution) const {
-    utils::SolutionValidator validator;
+    SolutionValidator validator;
     bool valid = validator.validate(expressions, solution);
     return valid;
 }
