@@ -1,6 +1,6 @@
 #include "arg_parser.h"
 
-ArgParser::ArgParser(const std::string &name, const std::string &description) {
+ArgParser::ArgParser(const std::string& name, const std::string& description) {
     this->name = name;
     this->description = description;
     this->maxArgWidth = 30;
@@ -9,11 +9,11 @@ ArgParser::ArgParser(const std::string &name, const std::string &description) {
     add("--help", "-h", ArgType::Flag, "Show this help message");
 }
 
-void ArgParser::addSection(const std::string &section) {
+void ArgParser::addSection(const std::string& section) {
     sections.push_back(section);
 }
 
-void ArgParser::addChoices(const std::string &longName, const std::string &shortName, ArgType type, const std::string &description, const std::vector<std::string> &choices, const std::string &defaultValue, bool required) {
+void ArgParser::addChoices(const std::string& longName, const std::string& shortName, ArgType type, const std::string& description, const std::vector<std::string>& choices, const std::string& defaultValue, bool required) {
     Argument argument(longName, shortName, type, description, sections.back(), choices, defaultValue, required);
     arguments.emplace_back(argument);
 
@@ -26,7 +26,7 @@ void ArgParser::addChoices(const std::string &longName, const std::string &short
     maxArgWidth = std::max(maxArgWidth, argument.getWidth());
 }
 
-void ArgParser::addChoices(const std::string &name, ArgType type, const std::string &description, const std::vector<std::string> &choices, const std::string &defaultValue, bool required) {
+void ArgParser::addChoices(const std::string& name, ArgType type, const std::string& description, const std::vector<std::string>& choices, const std::string& defaultValue, bool required) {
     if (name.find("--") == 0) {
         addChoices(name, "", type, description, choices, defaultValue, required);
     }
@@ -37,11 +37,11 @@ void ArgParser::addChoices(const std::string &name, ArgType type, const std::str
         throw std::runtime_error("Argument name must starts with \"-\" or \"--\"");
 }
 
-void ArgParser::add(const std::string &longName, const std::string &shortName, ArgType type, const std::string &description, const std::string &defaultValue, bool required) {
+void ArgParser::add(const std::string& longName, const std::string& shortName, ArgType type, const std::string& description, const std::string& defaultValue, bool required) {
     addChoices(longName, shortName, type, description, {}, defaultValue, required);
 }
 
-void ArgParser::add(const std::string &name, ArgType type, const std::string &description, const std::string &defaultValue, bool required) {
+void ArgParser::add(const std::string& name, ArgType type, const std::string& description, const std::string& defaultValue, bool required) {
     addChoices(name, type, description, {}, defaultValue, required);
 }
 
@@ -96,7 +96,7 @@ bool ArgParser::parse(int argc, char** argv) {
     return true;
 }
 
-bool ArgParser::isSet(const std::string &name) const {
+bool ArgParser::isSet(const std::string& name) const {
     auto it = arg2index.find(name);
     if (it == arg2index.end())
         return false;
@@ -109,26 +109,26 @@ void ArgParser::help() const {
     std::cout << std::endl;
     std::cout << "Usage: " << name << " [ARGS...]" << std::endl;
 
-    std::unordered_map<std::string, std::vector<const Argument *>> section2args;
+    std::unordered_map<std::string, std::vector<Argument>> section2args;
 
-    for (const auto &argument : arguments)
-        section2args[argument.section].push_back(&argument);
+    for (const Argument& argument : arguments)
+        section2args[argument.section].push_back(argument);
 
-    for (const auto &section : sections) {
+    for (const std::string& section : sections) {
         if (section2args.at(section).empty())
             continue;
 
         std::cout << std::endl << section << ":" << std::endl;
 
-        for (const auto &argument : section2args.at(section)) {
-            std::cout << "  " << std::left << std::setw(maxArgWidth + 2) << argument->getHelpName();
-            std::cout << argument->getHelpDescription();
+        for (const Argument& argument : section2args.at(section)) {
+            std::cout << "  " << std::left << std::setw(maxArgWidth + 2) << argument.getHelpName();
+            std::cout << argument.getHelpDescription();
             std::cout << std::endl;
         }
     }
 }
 
-std::string ArgParser::get(const std::string &name) const {
+std::string ArgParser::get(const std::string& name) const {
     auto it = arg2index.find(name);
     if (it == arg2index.end())
         throw std::runtime_error("Argument not found: " + name);
@@ -136,6 +136,6 @@ std::string ArgParser::get(const std::string &name) const {
     return arguments[it->second].value;
 }
 
-std::string ArgParser::operator[](const std::string &name) const {
+std::string ArgParser::operator[](const std::string& name) const {
     return get(name);
 }

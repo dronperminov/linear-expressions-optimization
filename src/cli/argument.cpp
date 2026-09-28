@@ -1,6 +1,6 @@
 #include "argument.h"
 
-Argument::Argument(const std::string &longName, const std::string &shortName, ArgType type, const std::string &description, const std::string &section, const std::vector<std::string> &choices, const std::string &defaultValue, bool required) {
+Argument::Argument(const std::string& longName, const std::string& shortName, ArgType type, const std::string& description, const std::string& section, const std::vector<std::string>& choices, const std::string& defaultValue, bool required) {
     this->longName = longName;
     this->shortName = shortName;
     this->type = type;
@@ -85,7 +85,7 @@ size_t Argument::getWidth() const {
     return longName.length() + 2 + shortName.length() + typeHintWidth;
 }
 
-bool Argument::validate(const std::string &parsedName) const {
+bool Argument::validate(const std::string& parsedName) const {
     if (type != ArgType::Flag && !isValidChoice(value)) {
         std::cerr << "Invalid value for argument \"" << parsedName << "\": " << value << " is not valid choice. Valid choices are: ";
 
@@ -117,7 +117,7 @@ bool Argument::validate(const std::string &parsedName) const {
     return true;
 }
 
-bool Argument::isNatural(const std::string &value) const {
+bool Argument::isNatural(const std::string& value) const {
     for (size_t i = 0; i < value.size(); i++)
         if (value[i] < '0' || value[i] > '9')
             return false;
@@ -125,7 +125,7 @@ bool Argument::isNatural(const std::string &value) const {
     return std::stoull(value) > 0;
 }
 
-bool Argument::isReal(const std::string &value) const {
+bool Argument::isReal(const std::string& value) const {
     if (value.size() == 0)
         return false;
 
@@ -146,7 +146,7 @@ bool Argument::isReal(const std::string &value) const {
     return true;
 }
 
-bool Argument::isValidChoice(const std::string &value) const {
+bool Argument::isValidChoice(const std::string& value) const {
     if (choices.empty())
         return true;
 
