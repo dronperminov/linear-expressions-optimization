@@ -23,10 +23,11 @@ void reduceVectorCovering(const std::vector<std::vector<int>>& expressions, size
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
     std::vector<vector_covering::DefaultScorer> scorers = {
-        vector_covering::DefaultScorer(1000, 100, 0, 1, 0),
-        vector_covering::DefaultScorer(1000, 100, 1, 0, 0),
-        vector_covering::DefaultScorer(1000, 100, 5, 3, 0),
-        vector_covering::DefaultScorer(1000, 100, 0, 0, 0)
+        vector_covering::DefaultScorer(),
+        vector_covering::DefaultScorer(10000, 1000, 0, 1, 0, 10),
+        vector_covering::DefaultScorer(10000, 1000, 1, 0, 0, 10),
+        vector_covering::DefaultScorer(10000, 1000, 5, 3, 0, 10),
+        vector_covering::DefaultScorer(10000, 1000, 0, 0, 0, 10)
     };
 
     GreedyAlternativeSelector selector(generator);

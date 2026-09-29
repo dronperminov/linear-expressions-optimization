@@ -94,7 +94,7 @@ void test(const ExpressionsSystem& expressionsSystem, std::mt19937& generator) {
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
     vector_covering::DefaultScorer defaultScorer;
-    vector_covering::DefaultScorer customScorer(1000, 100, 5, 3, 0);
+    vector_covering::DefaultScorer customScorer(1000, 100, 5, 3, 0, 0);
 
     GreedySelector greedy;
     GreedyAlternativeSelector greedyAlternative(generator);

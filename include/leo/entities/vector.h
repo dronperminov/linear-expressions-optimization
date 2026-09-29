@@ -45,6 +45,7 @@ public:
 
     bool isZero() const;
     bool isOneHot() const;
+    bool isSubVector(const Vector& vector) const;
 
     void canonize();
 };
