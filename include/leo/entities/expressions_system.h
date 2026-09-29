@@ -27,6 +27,8 @@ public:
     const std::vector<std::vector<int>>& getExpressions() const;
     std::vector<std::vector<int>> getTransposedExpressions() const;
 
+    Solution getNaiveSolution() const;
+
     bool validateVariablesCount() const;
     bool validateSolution(const Solution& solution) const;
 

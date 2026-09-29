@@ -10,13 +10,19 @@
 
 using namespace leo;
 
-Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& generator, int vecIterations, int cseIterations) {
-    int maxAbsValue = expressionsSystem.getMaxAbsValue();
-    size_t lowerBound = expressionsSystem.getAdditionsLowerBound();
+void solve(Solver& solver, size_t& bestAdditions, Solution& solution) {
+    size_t additions = solver.solve();
 
+    if (additions < bestAdditions) {
+        bestAdditions = additions;
+        solution = solver.getSolution();
+    }
+}
+
+void reduceVectorCovering(const std::vector<std::vector<int>>& expressions, size_t& bestAdditions, Solution& solution, int maxAbsValue, size_t lowerBound, std::mt19937& generator, int iterations) {
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
-    std::vector<vector_covering::DefaultScorer> vecScorers = {
+    std::vector<vector_covering::DefaultScorer> scorers = {
         vector_covering::DefaultScorer(1000, 100, 0, 1, 0),
         vector_covering::DefaultScorer(1000, 100, 1, 0, 0),
         vector_covering::DefaultScorer(1000, 100, 5, 3, 0),
@@ -24,41 +30,61 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& genera
     };
 
     GreedyAlternativeSelector selector(generator);
+    vector_covering::VectorCoveringSolver solver(expressions, parameters, scorers[0], selector);
 
-    vector_covering::VectorCoveringSolver vec(expressionsSystem.getExpressions(), parameters, vecScorers[0], selector);
+    for (int i = 0; i < iterations && lowerBound < bestAdditions; i++) {
+        solver.setScorer(scorers[generator() % scorers.size()]);
+        solve(solver, bestAdditions, solution);
+    }
+}
+
+void reduceCSE(const std::vector<std::vector<int>>& expressions, size_t& bestAdditions, Solution& solution, size_t lowerBound, std::mt19937& generator, int iterations) {
+    GreedyAlternativeSelector selector(generator);
+
+    cse::DefaultScorer defaultScorer;
+    cse::PotentialScorer potentialScorer(0.3);
+    cse::CommonSubexpressionSolver solver(expressions, defaultScorer, selector);
+
     std::uniform_real_distribution<double> uniform(0.0, 1.0);
 
-    size_t bestAdditions = vec.solve();
-    Solution solution = vec.getSolution();
-
-    for (int i = 1; i < vecIterations && lowerBound < bestAdditions; i++) {
-        vec.setScorer(vecScorers[generator() % vecScorers.size()]);
-
-        size_t additions = vec.solve();
-        if (additions < bestAdditions) {
-            bestAdditions = additions;
-            solution = vec.getSolution();
-        }
-    }
-
-    cse::DefaultScorer cseDefaultScorer;
-    cse::PotentialScorer csePotentialScorer(0.3);
-    cse::CommonSubexpressionSolver cse(expressionsSystem.getExpressions(), cseDefaultScorer, selector);
-
-    for (int i = 0; i < cseIterations && lowerBound < bestAdditions; i++) {
+    for (int i = 0; i < iterations && lowerBound < bestAdditions; i++) {
         if (uniform(generator) < 0.25) {
-            csePotentialScorer.setAlpha(0.1 + uniform(generator));
-            cse.setScorer(csePotentialScorer);
+            potentialScorer.setAlpha(uniform(generator) * 0.6);
+            solver.setScorer(potentialScorer);
         }
         else {
-            cse.setScorer(cseDefaultScorer);
+            solver.setScorer(defaultScorer);
         }
 
-        size_t additions = cse.solve();
-        if (additions < bestAdditions) {
-            bestAdditions = additions;
-            solution = cse.getSolution();
-        }
+        solve(solver, bestAdditions, solution);
+    }
+}
+
+Solution reduceSystem(const ExpressionsSystem& expressionsSystem, std::mt19937& generator, int vecIterations, int cseIterations) {
+    int maxAbsValue = expressionsSystem.getMaxAbsValue();
+    size_t lowerBound = expressionsSystem.getAdditionsLowerBound();
+
+    Solution solution = expressionsSystem.getNaiveSolution();
+    size_t bestAdditions = solution.getAdditions();
+
+    reduceVectorCovering(expressionsSystem.getExpressions(), bestAdditions, solution, maxAbsValue, lowerBound, generator, vecIterations);
+    reduceCSE(expressionsSystem.getExpressions(), bestAdditions, solution, lowerBound, generator, cseIterations);
+
+    return solution;
+}
+
+Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& generator, int vecIterations, int cseIterations, bool tryTranspose) {
+    Solution solution = reduceSystem(expressionsSystem, generator, vecIterations, cseIterations);
+    size_t bestAdditions = solution.getAdditions();
+
+    if (tryTranspose) {
+        ExpressionsSystem transposedSystem(expressionsSystem.getTransposedExpressions());
+        Solution transposed = reduceSystem(transposedSystem, generator, vecIterations, cseIterations);
+        SolutionTransposer transposer;
+        Solution reversed = transposer.transpose(transposed);
+
+        if (reversed.getAdditions() < bestAdditions)
+            solution = reversed;
     }
 
     return solution;
@@ -86,6 +112,7 @@ std::unique_ptr<SolutionFormatter> getFormatter(const std::string& outputPath, c
 
 int main(int argc, char** argv) {
     ArgParser parser("reduce", "Minimize the number of additions and subtractions required to evaluate a system of linear expressions.");
+    parser.add("--quiet", "-q", ArgType::Flag, "Suppress all output to stdout, only save the solution to the output file");
 
     parser.addSection("Input / output");
     parser.add("--input-path", "-i", ArgType::Path, "Path to the input file containing linear expressions", "", true);
@@ -93,8 +120,9 @@ int main(int argc, char** argv) {
 
     parser.addSection("Optimization");
     parser.add("--seed", ArgType::UInt, "Random seed; 0 uses a time-based seed", "0");
-    parser.add("--vec-iterations", ArgType::Natural, "Number of iterations of the vector covering solver", "10");
-    parser.add("--cse-iterations", ArgType::Natural, "Number of iterations of the common subexpression solver", "100");
+    parser.add("--vec-iterations", ArgType::UInt, "Number of iterations of the vector covering solver", "10");
+    parser.add("--cse-iterations", ArgType::UInt, "Number of iterations of the common subexpression solver", "100");
+    parser.add("--try-transpose", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
 
     parser.addSection("Solution");
     parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
@@ -103,16 +131,32 @@ int main(int argc, char** argv) {
     if (!parser.parse(argc, argv))
         return 0;
 
+    bool quiet = parser.isSet("--quiet");
+
     std::string inputPath = parser["--input-path"];
     std::string outputPath = parser["--output-path"];
 
-    int seed = parser.isSet("--seed") ? std::stoi(parser["--seed"]) : time(0);
-    std::mt19937 generator(seed);
-
+    int seed = parser.isSet("--seed") && std::stoi(parser["--seed"]) != 0 ? std::stoi(parser["--seed"]) : time(0);
     int vecIterations = std::stoi(parser["--vec-iterations"]);
     int cseIterations = std::stoi(parser["--cse-iterations"]);
+    bool tryTranspose = parser.isSet("--try-transpose");
+
     bool validate = parser.isSet("--validate");
     std::string format = parser["--format"];
+
+    if (!quiet) {
+        std::cout << "Parsed parameters:" << std::endl;
+        std::cout << "- input path: " << inputPath << std::endl;
+        std::cout << "- output path: " << outputPath << std::endl;
+        std::cout << "- random seed: " << seed << std::endl;
+        std::cout << "- iterations (vec / cse): " << vecIterations << " / " << cseIterations << std::endl;
+        std::cout << "- try transposing: " << (tryTranspose ? "yes" : "no") << std::endl;
+        std::cout << "- validate solution: " << (validate ? "yes" : "no") << std::endl;
+        std::cout << "- format: " << format << std::endl;
+        std::cout << std::endl;
+    }
+
+    std::mt19937 generator(seed);
 
     try {
         std::unique_ptr<SolutionFormatter> formatter = getFormatter(outputPath, format);
@@ -120,26 +164,30 @@ int main(int argc, char** argv) {
         ExpressionsReader reader;
         ExpressionsSystem expressionsSystem = reader.read(inputPath);
 
-        std::cout << "Readed system from \"" << inputPath << "\"" << std::endl;
-        expressionsSystem.describe(std::cout);
-        std::cout << std::endl;
+        if (!quiet) {
+            std::cout << "Readed system of expressions:" << std::endl;
+            expressionsSystem.describe(std::cout);
+            std::cout << std::endl;
+        }
 
-        Solution solution = reduce(expressionsSystem, generator, vecIterations, cseIterations);
+        Solution solution = reduce(expressionsSystem, generator, vecIterations, cseIterations, tryTranspose);
 
         if (validate) {
             if (!expressionsSystem.validateSolution(solution))
                 throw std::runtime_error("solution is not valid");
 
-            std::cout << "Solution is valid" << std::endl;
+            if (!quiet)
+                std::cout << "Solution is valid" << std::endl;
         }
-
-        std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
 
         std::ofstream fout(outputPath);
         formatter->format(fout, solution);
         fout.close();
 
-        std::cout << "Solution saved to \"" << outputPath << "\"" << std::endl;
+        if (!quiet) {
+            std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
+            std::cout << "Solution saved to \"" << outputPath << "\"" << std::endl;
+        }
     }
     catch (const std::exception& exception) {
         std::cerr << "Error: " << exception.what() << std::endl;
