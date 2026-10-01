@@ -108,16 +108,16 @@ std::unique_ptr<SolutionFormatter> getFormatter(const std::string& outputPath, c
     if (detectedFormat == "json")
         return std::make_unique<JsonSolutionFormatter>();
 
-    throw std::runtime_error("invalid formatter type \"" + detectedFormat + "\"");
+    throw std::runtime_error("unsupported output format: \"" + detectedFormat + "\", expected one of: slp, txt, json");
 }
 
 int main(int argc, char** argv) {
     ArgParser parser("reduce", "Minimize the number of additions and subtractions required to evaluate a system of linear expressions.");
-    parser.add("--quiet", "-q", ArgType::Flag, "Suppress all output to stdout, only save the solution to the output file");
+    parser.add("--quiet", "-q", ArgType::Flag, "Suppress all output to stdout");
 
     parser.addSection("Input / output");
     parser.add("--input-path", "-i", ArgType::Path, "Path to the input file containing linear expressions", "", true);
-    parser.add("--output-path", "-o", ArgType::Path, "Path to the output file for the resulting solution", "output.txt");
+    parser.add("--output-path", "-o", ArgType::Path, "Path to the output file for the resulting solution, or \"stdout\" for standard output", "output.txt");
 
     parser.addSection("Optimization");
     parser.add("--seed", ArgType::UInt, "Random seed; 0 uses a time-based seed", "0");
@@ -131,6 +131,11 @@ int main(int argc, char** argv) {
 
     if (!parser.parse(argc, argv))
         return 0;
+
+    if (parser["--output-path"] == "stdout" && parser["--format"] == "auto") {
+        std::cerr << "Format \"auto\" cannot be used with stdout. Specify the format explicitly." << std::endl;
+        return 0;
+    }
 
     bool quiet = parser.isSet("--quiet");
 
@@ -181,13 +186,19 @@ int main(int argc, char** argv) {
                 std::cout << "Solution is valid" << std::endl;
         }
 
-        std::ofstream fout(outputPath);
-        formatter->format(fout, solution);
-        fout.close();
-
-        if (!quiet) {
+        if (!quiet)
             std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
-            std::cout << "Solution saved to \"" << outputPath << "\"" << std::endl;
+
+        if (outputPath == "stdout") {
+            formatter->format(std::cout, solution);
+        }
+        else {
+            std::ofstream fout(outputPath);
+            formatter->format(fout, solution);
+            fout.close();
+
+            if (!quiet)
+                std::cout << "Solution saved to \"" << outputPath << "\"" << std::endl;
         }
     }
     catch (const std::exception& exception) {
