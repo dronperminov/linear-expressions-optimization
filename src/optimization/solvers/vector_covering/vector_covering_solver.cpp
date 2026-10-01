@@ -2,7 +2,7 @@
 
 namespace leo::vector_covering {
 
-VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector) : Solver(expressions) {
+VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
     setParameters(parameters);
     setScorer(scorer);
     setSelector(selector);
@@ -25,12 +25,18 @@ void VectorCoveringSolver::setParameters(const VectorCoveringParameters& paramet
     this->parameters = parameters;
 }
 
-void VectorCoveringSolver::setScorer(const VectorCoveringScorer& scorer) {
-    this->scorer = &scorer;
+void VectorCoveringSolver::setScorer(std::shared_ptr<const VectorCoveringScorer> scorer) {
+    if (!scorer)
+        throw std::invalid_argument("VectorCoveringSolver::setScorer: scorer must not be null");
+
+    this->scorer = std::move(scorer);
 }
 
-void VectorCoveringSolver::setSelector(const ScoreSelector& selector) {
-    this->selector = &selector;
+void VectorCoveringSolver::setSelector(std::shared_ptr<const ScoreSelector> selector) {
+    if (!selector)
+        throw std::invalid_argument("VectorCoveringSolver::setSelector: selector must not be null");
+
+    this->selector = std::move(selector);
 }
 
 size_t VectorCoveringSolver::solve() {
@@ -38,7 +44,7 @@ size_t VectorCoveringSolver::solve() {
 
     while (!uncovered.empty() && (!parameters.naiveFallback || steps.size() <= naiveComplexity)) {
         scorer->score(candidates, {uncovered, vectors}, scores);
-        size_t index = selector->selectIndex(scores);
+        size_t index = selector->selectIndex(scores, generator);
         addCandidate(candidates[index]);
 
         if (!uncovered.empty()) {

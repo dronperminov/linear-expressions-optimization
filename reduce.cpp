@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <random>
@@ -22,16 +23,19 @@ void solve(Solver& solver, size_t& bestAdditions, Solution& solution) {
 void reduceVectorCovering(const std::vector<std::vector<int>>& expressions, size_t& bestAdditions, Solution& solution, int maxAbsValue, size_t lowerBound, std::mt19937& generator, int iterations) {
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
-    std::vector<vector_covering::DefaultScorer> scorers = {
-        vector_covering::DefaultScorer(),
-        vector_covering::DefaultScorer(10000, 1000, 0, 1, 0, 10),
-        vector_covering::DefaultScorer(10000, 1000, 1, 0, 0, 10),
-        vector_covering::DefaultScorer(10000, 1000, 5, 3, 0, 10),
-        vector_covering::DefaultScorer(10000, 1000, 0, 0, 0, 10)
+    std::vector<std::shared_ptr<const vector_covering::VectorCoveringScorer>> scorers = {
+        std::make_shared<vector_covering::DefaultScorer>(),
+        std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0,   0, 0,  0),
+        std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0,   0, 0,  5),
+        std::make_shared<vector_covering::DefaultScorer>(10000,  300,   0,   1, 2,  5),
+        std::make_shared<vector_covering::DefaultScorer>(10000,  300,   0,   1, 5, 50),
+        std::make_shared<vector_covering::DefaultScorer>(10000, 1000,   0, 0.1, 0,  5),
+        std::make_shared<vector_covering::DefaultScorer>(10000, 1000, 0.1,   1, 1,  0),
+        std::make_shared<vector_covering::DefaultScorer>(10000,  300, 0.1, 0.1, 0,  0)
     };
 
-    GreedyAlternativeSelector selector(generator);
-    vector_covering::VectorCoveringSolver solver(expressions, parameters, scorers[0], selector);
+    auto selector = std::make_shared<GreedyAlternativeSelector>();
+    vector_covering::VectorCoveringSolver solver(expressions, parameters, scorers[0], selector, generator());
 
     for (int i = 0; i < iterations && lowerBound < bestAdditions; i++) {
         solver.setScorer(scorers[generator() % scorers.size()]);
@@ -40,17 +44,17 @@ void reduceVectorCovering(const std::vector<std::vector<int>>& expressions, size
 }
 
 void reduceCSE(const std::vector<std::vector<int>>& expressions, size_t& bestAdditions, Solution& solution, size_t lowerBound, std::mt19937& generator, int iterations) {
-    GreedyAlternativeSelector selector(generator);
+    auto selector = std::make_shared<const GreedyAlternativeSelector>();
 
-    cse::DefaultScorer defaultScorer;
-    cse::PotentialScorer potentialScorer(0.3);
-    cse::CommonSubexpressionSolver solver(expressions, defaultScorer, selector);
+    auto defaultScorer = std::make_shared<cse::DefaultScorer>();
+    auto potentialScorer = std::make_shared<cse::PotentialScorer>(0.3);
+    cse::CommonSubexpressionSolver solver(expressions, defaultScorer, selector, generator());
 
     std::uniform_real_distribution<double> uniform(0.0, 1.0);
 
     for (int i = 0; i < iterations && lowerBound < bestAdditions; i++) {
         if (uniform(generator) < 0.25) {
-            potentialScorer.setAlpha(uniform(generator) * 0.6);
+            potentialScorer->setAlpha(uniform(generator) * 0.6);
             solver.setScorer(potentialScorer);
         }
         else {
@@ -109,6 +113,31 @@ std::unique_ptr<SolutionFormatter> getFormatter(const std::string& outputPath, c
         return std::make_unique<JsonSolutionFormatter>();
 
     throw std::runtime_error("unsupported output format: \"" + detectedFormat + "\", expected one of: slp, txt, json");
+}
+
+std::string formatDuration(std::chrono::steady_clock::duration duration) {
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    std::ostringstream oss;
+
+    if (ms < 1000)
+        return std::to_string(ms) + " ms";
+
+    double elapsed = ms / 1000.0;
+
+    if (elapsed < 60) {
+        oss << std::setprecision(2) << std::fixed << elapsed << " sec";
+    }
+    else {
+        int seconds = int(elapsed + 0.5);
+        int hours = seconds / 3600;
+        int minutes = (seconds % 3600) / 60;
+
+        oss << std::setw(2) << std::setfill('0') << hours << ":";
+        oss << std::setw(2) << std::setfill('0') << minutes << ":";
+        oss << std::setw(2) << std::setfill('0') << (seconds % 60);
+    }
+
+    return oss.str();
 }
 
 int main(int argc, char** argv) {
@@ -176,7 +205,9 @@ int main(int argc, char** argv) {
             std::cout << std::endl;
         }
 
+        auto t1 = std::chrono::steady_clock::now();
         Solution solution = reduce(expressionsSystem, generator, vecIterations, cseIterations, tryTranspose);
+        auto t2 = std::chrono::steady_clock::now();
 
         if (validate) {
             if (!expressionsSystem.validateSolution(solution))
@@ -186,8 +217,10 @@ int main(int argc, char** argv) {
                 std::cout << "Solution is valid" << std::endl;
         }
 
-        if (!quiet)
+        if (!quiet) {
             std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
+            std::cout << "Elapsed " << formatDuration(t2 - t1) << std::endl;
+        }
 
         if (outputPath == "stdout") {
             formatter->format(std::cout, solution);

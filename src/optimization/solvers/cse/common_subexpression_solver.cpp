@@ -2,17 +2,23 @@
 
 namespace leo::cse {
 
-CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, const CommonSubexpressionScorer& scorer, const ScoreSelector& selector) : Solver(expressions) {
+CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, std::shared_ptr<const CommonSubexpressionScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
     setScorer(scorer);
     setSelector(selector);
 }
 
-void CommonSubexpressionSolver::setScorer(const CommonSubexpressionScorer& scorer) {
-    this->scorer = &scorer;
+void CommonSubexpressionSolver::setScorer(std::shared_ptr<const CommonSubexpressionScorer> scorer) {
+    if (!scorer)
+        throw std::invalid_argument("CommonSubexpressionSolver::setScorer: scorer must not be null");
+
+    this->scorer = std::move(scorer);
 }
 
-void CommonSubexpressionSolver::setSelector(const ScoreSelector& selector) {
-    this->selector = &selector;
+void CommonSubexpressionSolver::setSelector(std::shared_ptr<const ScoreSelector> selector) {
+    if (!selector)
+        throw std::invalid_argument("CommonSubexpressionSolver::setSelector: selector must not be null");
+
+    this->selector = std::move(selector);
 }
 
 size_t CommonSubexpressionSolver::solve() {
@@ -24,7 +30,7 @@ size_t CommonSubexpressionSolver::solve() {
             break;
 
         scorer->score(subexpressions, {matrix}, scores);
-        Subexpression subexpression = subexpressions[selector->selectIndex(scores)];
+        Subexpression subexpression = subexpressions[selector->selectIndex(scores, generator)];
         eliminate(subexpression);
     }
 

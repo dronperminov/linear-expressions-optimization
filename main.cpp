@@ -84,7 +84,7 @@ void solve(const ExpressionsSystem& expressionsSystem, Solver& solver, const std
     std::cout << std::endl;
 }
 
-void test(const ExpressionsSystem& expressionsSystem, std::mt19937& generator) {
+void test(const ExpressionsSystem& expressionsSystem, uint32_t seed) {
     int maxAbsValue = expressionsSystem.getMaxAbsValue();
 
     std::cout << "Initial system:" << std::endl;
@@ -93,14 +93,14 @@ void test(const ExpressionsSystem& expressionsSystem, std::mt19937& generator) {
 
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
-    vector_covering::DefaultScorer defaultScorer;
-    vector_covering::DefaultScorer customScorer(1000, 100, 5, 3, 0, 0);
+    auto defaultScorer = std::make_shared<vector_covering::DefaultScorer>();
+    auto customScorer = std::make_shared<vector_covering::DefaultScorer>(1000, 100, 5, 3, 0, 0);
 
-    GreedySelector greedy;
-    GreedyAlternativeSelector greedyAlternative(generator);
-    GreedyRandomSelector greedyRandom(generator, 0.3);
+    auto greedy = std::make_shared<GreedySelector>();
+    auto greedyAlternative = std::make_shared<GreedyAlternativeSelector>();
+    auto greedyRandom = std::make_shared<GreedyRandomSelector>(0.3);
 
-    vector_covering::VectorCoveringSolver vec(expressionsSystem.getExpressions(), parameters, defaultScorer, greedy);
+    vector_covering::VectorCoveringSolver vec(expressionsSystem.getExpressions(), parameters, defaultScorer, greedy, seed);
     solve(expressionsSystem, vec, "vec: default, greedy", true);
 
     vec.setScorer(customScorer);
@@ -110,9 +110,9 @@ void test(const ExpressionsSystem& expressionsSystem, std::mt19937& generator) {
     vec.setSelector(greedyAlternative);
     solve(expressionsSystem, vec, "vec: default, greedy-alternative", true);
 
-    cse::DefaultScorer cseDefaultScorer;
-    cse::PotentialScorer csePotentialScorer(0.3);
-    cse::CommonSubexpressionSolver cse(expressionsSystem.getExpressions(), cseDefaultScorer, greedyAlternative);
+    auto cseDefaultScorer = std::make_shared<cse::DefaultScorer>();
+    auto csePotentialScorer = std::make_shared<cse::PotentialScorer>(0.3);
+    cse::CommonSubexpressionSolver cse(expressionsSystem.getExpressions(), cseDefaultScorer, greedyAlternative, seed);
     solve(expressionsSystem, cse, "cse: default, greedy", true);
 
     cse.setScorer(csePotentialScorer);
@@ -145,7 +145,7 @@ int main() {
         int dimension = 1 + generator() % 10;
 
         ExpressionsSystem expressionsSystem = generateSystem(count, dimension, {-1, 0, 1}, generator);
-        test(expressionsSystem, generator);
+        test(expressionsSystem, generator());
     }
 
     ExpressionsSystem expressionsSystem({
@@ -176,7 +176,7 @@ int main() {
         {0, 0, 0, 0, 0, 0, 0, 0, 0}
     });
 
-    test(expressionsSystem, generator);
+    test(expressionsSystem, generator());
 
     return 0;
 }

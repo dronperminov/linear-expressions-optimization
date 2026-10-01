@@ -2,7 +2,7 @@
 
 namespace leo {
 
-GreedyRandomSelector::GreedyRandomSelector(std::mt19937& generator, double randomProbability) : generator(generator) {
+GreedyRandomSelector::GreedyRandomSelector(double randomProbability) {
     setRandomProbability(randomProbability);
 }
 
@@ -13,7 +13,7 @@ void GreedyRandomSelector::setRandomProbability(double randomProbability) {
     this->randomProbability = randomProbability;
 }
 
-size_t GreedyRandomSelector::selectIndex(const std::vector<double>& scores) const {
+size_t GreedyRandomSelector::selectIndex(const std::vector<double>& scores, std::mt19937& generator) const {
     std::uniform_real_distribution<double> uniform(0.0, 1.0);
     if (uniform(generator) < randomProbability) {
         std::uniform_int_distribution<size_t> dist(0, scores.size() - 1);

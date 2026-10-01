@@ -2,7 +2,7 @@
 
 namespace leo {
 
-size_t GreedySelector::selectIndex(const std::vector<double>& scores) const {
+size_t GreedySelector::selectIndex(const std::vector<double>& scores, std::mt19937& generator) const {
     size_t imax = 0;
 
     for (size_t i = 1; i < scores.size(); i++)

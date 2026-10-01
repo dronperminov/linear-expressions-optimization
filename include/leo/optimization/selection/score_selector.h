@@ -1,12 +1,13 @@
 #pragma once
 
 #include <vector>
+#include <random>
 
 namespace leo {
 
 class ScoreSelector {
 public:
-    virtual size_t selectIndex(const std::vector<double>& scores) const = 0;
+    virtual size_t selectIndex(const std::vector<double>& scores, std::mt19937& generator) const = 0;
 
     virtual ~ScoreSelector() = default;
 protected:
