@@ -29,6 +29,8 @@ class VectorCoveringSolver : public Solver {
     std::vector<Vector> vectors;
     std::vector<Substitution> steps;
     std::vector<double> scores;
+    std::vector<Candidate> candidates;
+    std::unordered_set<Vector> unique;
 public:
     VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector);
 
@@ -41,7 +43,8 @@ public:
 private:
     void initialize();
 
-    std::vector<Candidate> getCandidates() const;
+    void initializeCandidates();
+    void updateCandidates();
     void addCandidate(const Candidate& candidate);
 
     void fallbackToNaive();
