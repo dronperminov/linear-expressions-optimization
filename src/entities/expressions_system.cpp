@@ -65,6 +65,17 @@ std::vector<std::vector<int>> ExpressionsSystem::getTransposedExpressions() cons
     return transposed;
 }
 
+Solution ExpressionsSystem::getNaiveSolution() const {
+    std::vector<std::vector<Term>> naiveExpressions(count);
+
+    for (size_t i = 0; i < expressions.size(); i++)
+        for (size_t j = 0; j < expressions[i].size(); j++)
+            if (expressions[i][j])
+                naiveExpressions[i].push_back({j, expressions[i][j]});
+
+    return {dimension, {}, naiveExpressions};
+}
+
 bool ExpressionsSystem::validateVariablesCount() const {
     for (size_t i = 1; i < count; i++)
         if (expressions[i].size() != dimension)
@@ -74,9 +85,17 @@ bool ExpressionsSystem::validateVariablesCount() const {
 }
 
 bool ExpressionsSystem::validateSolution(const Solution& solution) const {
-    utils::SolutionValidator validator;
+    SolutionValidator validator;
     bool valid = validator.validate(expressions, solution);
     return valid;
+}
+
+void ExpressionsSystem::describe(std::ostream& os) const {
+    os << "- variables: " << getVariablesCount() << std::endl;
+    os << "- expressions: " << getExpressionsCount() << std::endl;
+    os << "- max abs value: " << getMaxAbsValue() << std::endl;
+    os << "- naive additions: " << getNaiveAdditions() << std::endl;
+    os << "- lower bound: " << getAdditionsLowerBound() << std::endl;
 }
 
 size_t ExpressionsSystem::getAdditionsLowerBound(const std::vector<std::vector<int>>& expressions) const {

@@ -228,6 +228,20 @@ bool Vector::isOneHot() const {
     return sum == 1;
 }
 
+bool Vector::isSubVector(const Vector& vector) const {
+    bool positive = true;
+    bool negative = true;
+
+    for (size_t i = 0; i < values.size(); i++) {
+        if (values[i]) {
+            positive &= values[i] == vector.values[i];
+            negative &= values[i] == -vector.values[i];
+        }
+    }
+
+    return positive || negative;
+}
+
 void Vector::canonize() {
     int sign = 1;
     bool first = false;

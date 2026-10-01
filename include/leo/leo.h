@@ -7,12 +7,15 @@
 #include <leo/entities/term.h>
 #include <leo/entities/vector.h>
 
+// formatters
+#include <leo/formatters/solution_formatter.h>
+#include <leo/formatters/json_solution_formatter.h>
+#include <leo/formatters/plain_text_solution_formatter.h>
+#include <leo/formatters/slp_solution_formatter.h>
+
 // utils
 #include <leo/utils/solution_validator.h>
 #include <leo/utils/solution_transposer.h>
-
-// utils/formatters
-#include <leo/utils/formatters/slp_formatter.h>
 
 // selectors
 #include <leo/optimization/selection/greedy_alternative_selector.h>

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
 #include <unordered_set>
 
@@ -26,8 +27,12 @@ public:
     const std::vector<std::vector<int>>& getExpressions() const;
     std::vector<std::vector<int>> getTransposedExpressions() const;
 
+    Solution getNaiveSolution() const;
+
     bool validateVariablesCount() const;
     bool validateSolution(const Solution& solution) const;
+
+    void describe(std::ostream& os) const;
 private:
     size_t getAdditionsLowerBound(const std::vector<std::vector<int>>& expressions) const;
 };

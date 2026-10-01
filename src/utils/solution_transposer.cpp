@@ -1,6 +1,6 @@
 #include "leo/utils/solution_transposer.h"
 
-namespace leo::utils {
+namespace leo {
 
 Solution SolutionTransposer::transpose(const Solution& solution) const {
     size_t dimensionT = solution.expressions.size();

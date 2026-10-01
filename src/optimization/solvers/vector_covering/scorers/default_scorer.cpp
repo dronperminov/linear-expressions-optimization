@@ -3,19 +3,21 @@
 namespace leo::vector_covering {
 
 DefaultScorer::DefaultScorer() {
-    coverWeight = 1000.0;
-    oneStepWeight = 100.0;
+    coverWeight = 10000.0;
+    oneStepWeight = 1000.0;
     hammingWeight = 0.0;
-    matchesWeight = 1.0;
+    matchesWeight = 0.1;
     distanceWeight = 0.0;
+    savingsWeight = 10.0;
 }
 
-DefaultScorer::DefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight, double distanceWeight) {
+DefaultScorer::DefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight, double distanceWeight, double savingsWeight) {
     this->coverWeight = coverWeight;
     this->oneStepWeight = oneStepWeight;
     this->hammingWeight = hammingWeight;
     this->matchesWeight = matchesWeight;
     this->distanceWeight = distanceWeight;
+    this->savingsWeight = savingsWeight;
 }
 
 void DefaultScorer::score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const {
@@ -34,6 +36,9 @@ void DefaultScorer::score(const std::vector<Candidate>& candidates, const Contex
             score -= hammingWeight * canonized.getHammingDistance(target);
             score += matchesWeight * canonized.getMatchesCount(target);
             score -= distanceWeight * canonized.getDistance(target);
+
+            if (savingsWeight > 0 && canonized.isSubVector(target))
+                score += savingsWeight * (canonized.getSupport() - 1);
         }
 
         scores[i] = score;

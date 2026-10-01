@@ -12,9 +12,10 @@ class DefaultScorer : public VectorCoveringScorer {
     double hammingWeight;
     double matchesWeight;
     double distanceWeight;
+    double savingsWeight;
 public:
     DefaultScorer();
-    DefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight, double distanceWeight);
+    DefaultScorer(double coverWeight, double oneStepWeight, double hammingWeight, double matchesWeight, double distanceWeight, double savingsWeight);
 
     void score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const;
 private:

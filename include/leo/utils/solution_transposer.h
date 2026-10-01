@@ -10,7 +10,7 @@
 #include <leo/entities/vector.h>
 #include <leo/entities/vector_index.h>
 
-namespace leo::utils {
+namespace leo {
 
 class SolutionTransposer {
 public:
