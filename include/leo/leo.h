@@ -22,6 +22,7 @@
 #include <leo/optimization/selection/greedy_random_selector.h>
 #include <leo/optimization/selection/greedy_selector.h>
 #include <leo/optimization/selection/score_selector.h>
+#include <leo/optimization/selection/weighted_random_selector.h>
 
 // solvers
 #include <leo/optimization/solvers/solver.h>

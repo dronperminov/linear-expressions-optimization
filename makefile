@@ -9,7 +9,8 @@ LEO_ENTITIES = src/leo/entities/vector.o \
 LEO_SELECTORS = src/leo/optimization/selection/score_selector.o \
             src/leo/optimization/selection/greedy_selector.o \
             src/leo/optimization/selection/greedy_alternative_selector.o \
-            src/leo/optimization/selection/greedy_random_selector.o
+            src/leo/optimization/selection/greedy_random_selector.o \
+            src/leo/optimization/selection/weighted_random_selector.o
 
 LEO_SOLVERS = src/leo/optimization/solvers/solver.o \
           src/leo/optimization/solvers/vector_covering/scorers/default_scorer.o \
