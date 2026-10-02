@@ -8,6 +8,9 @@
 
 #include "src/cli/arg_parser.h"
 #include "src/io/expressions_reader.h"
+#include "src/io/expressions_readers/txt_expressions_reader.h"
+#include "src/io/expressions_readers/sms_expressions_reader.h"
+#include "src/utils.h"
 
 using namespace leo;
 
@@ -21,6 +24,9 @@ void solve(Solver& solver, size_t& bestAdditions, Solution& solution) {
 }
 
 void reduceVectorCovering(const std::vector<std::vector<int>>& expressions, size_t& bestAdditions, Solution& solution, int maxAbsValue, size_t lowerBound, std::mt19937& generator, int iterations) {
+    if (expressions.empty() || expressions.size() < expressions[0].size())
+        return;
+
     vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
 
     std::vector<std::shared_ptr<const vector_covering::VectorCoveringScorer>> scorers = {
@@ -95,11 +101,11 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& genera
     return solution;
 }
 
-std::unique_ptr<SolutionFormatter> getFormatter(const std::string& outputPath, const std::string& format) {
+std::unique_ptr<SolutionFormatter> getFormatter(const std::string& path, const std::string& format) {
     std::string detectedFormat = format;
 
     if (format == "auto") {
-        std::string extension = std::filesystem::path(outputPath).extension().string();
+        std::string extension = std::filesystem::path(path).extension().string();
         detectedFormat = extension.empty() ? "" : extension.substr(1);
     }
 
@@ -115,29 +121,13 @@ std::unique_ptr<SolutionFormatter> getFormatter(const std::string& outputPath, c
     throw std::runtime_error("unsupported output format: \"" + detectedFormat + "\", expected one of: slp, txt, json");
 }
 
-std::string formatDuration(std::chrono::steady_clock::duration duration) {
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-    std::ostringstream oss;
+std::unique_ptr<ExpressionsReader> getExpressionsReader(const std::string& path) {
+    std::string extension = std::filesystem::path(path).extension().string();
 
-    if (ms < 1000)
-        return std::to_string(ms) + " ms";
+    if (extension == ".sms")
+        return std::make_unique<SmsExpressionsReader>();
 
-    double elapsed = ms / 1000.0;
-
-    if (elapsed < 60) {
-        oss << std::setprecision(2) << std::fixed << elapsed << " sec";
-    }
-    else {
-        int seconds = int(elapsed + 0.5);
-        int hours = seconds / 3600;
-        int minutes = (seconds % 3600) / 60;
-
-        oss << std::setw(2) << std::setfill('0') << hours << ":";
-        oss << std::setw(2) << std::setfill('0') << minutes << ":";
-        oss << std::setw(2) << std::setfill('0') << (seconds % 60);
-    }
-
-    return oss.str();
+    return std::make_unique<TxtExpressionsReader>();
 }
 
 int main(int argc, char** argv) {
@@ -195,9 +185,9 @@ int main(int argc, char** argv) {
 
     try {
         std::unique_ptr<SolutionFormatter> formatter = getFormatter(outputPath, format);
+        std::unique_ptr<ExpressionsReader> reader = getExpressionsReader(inputPath);
 
-        ExpressionsReader reader;
-        ExpressionsSystem expressionsSystem = reader.read(inputPath);
+        ExpressionsSystem expressionsSystem = reader->read(inputPath);
 
         if (!quiet) {
             std::cout << "Readed system of expressions:" << std::endl;
