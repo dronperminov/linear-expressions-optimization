@@ -1,29 +1,29 @@
 CXX = g++
 FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp -Iinclude
 
-ENTITIES = src/entities/vector.o \
-           src/entities/vector_index.o \
-           src/entities/solution.o \
-           src/entities/expressions_system.o
+ENTITIES = src/leo/entities/vector.o \
+           src/leo/entities/vector_index.o \
+           src/leo/entities/solution.o \
+           src/leo/entities/expressions_system.o
 
-SELECTORS = src/optimization/selection/score_selector.o \
-            src/optimization/selection/greedy_selector.o \
-            src/optimization/selection/greedy_alternative_selector.o \
-            src/optimization/selection/greedy_random_selector.o
+SELECTORS = src/leo/optimization/selection/score_selector.o \
+            src/leo/optimization/selection/greedy_selector.o \
+            src/leo/optimization/selection/greedy_alternative_selector.o \
+            src/leo/optimization/selection/greedy_random_selector.o
 
-SOLVERS = src/optimization/solvers/solver.o \
-          src/optimization/solvers/vector_covering/scorers/default_scorer.o \
-          src/optimization/solvers/vector_covering/vector_covering_solver.o \
-          src/optimization/solvers/cse/scorers/default_scorer.o \
-          src/optimization/solvers/cse/scorers/potential_scorer.o \
-          src/optimization/solvers/cse/common_subexpression_solver.o
+SOLVERS = src/leo/optimization/solvers/solver.o \
+          src/leo/optimization/solvers/vector_covering/scorers/default_scorer.o \
+          src/leo/optimization/solvers/vector_covering/vector_covering_solver.o \
+          src/leo/optimization/solvers/cse/scorers/default_scorer.o \
+          src/leo/optimization/solvers/cse/scorers/potential_scorer.o \
+          src/leo/optimization/solvers/cse/common_subexpression_solver.o
 
-FORMATTERS = src/formatters/json_solution_formatter.o \
-             src/formatters/plain_text_solution_formatter.o \
-             src/formatters/slp_solution_formatter.o
+FORMATTERS = src/leo/formatters/json_solution_formatter.o \
+             src/leo/formatters/plain_text_solution_formatter.o \
+             src/leo/formatters/slp_solution_formatter.o
 
-UTILS = src/utils/solution_validator.o \
-        src/utils/solution_transposer.o
+UTILS = src/leo/utils/solution_validator.o \
+        src/leo/utils/solution_transposer.o
 
 CLI = src/cli/argument.o src/cli/arg_parser.o
 
