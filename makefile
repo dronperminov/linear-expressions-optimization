@@ -16,6 +16,7 @@ LEO_SOLVERS = src/leo/optimization/solvers/solver.o \
           src/leo/optimization/solvers/vector_covering/vector_covering_solver.o \
           src/leo/optimization/solvers/cse/scorers/default_scorer.o \
           src/leo/optimization/solvers/cse/scorers/potential_scorer.o \
+          src/leo/optimization/solvers/cse/scorers/intersections_scorer.o \
           src/leo/optimization/solvers/cse/common_subexpression_solver.o
 
 LEO_OPTIMIZATION = src/leo/optimization/strategy_pool.o \

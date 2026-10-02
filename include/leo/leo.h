@@ -32,6 +32,7 @@
 #include <leo/optimization/solvers/cse/context.h>
 #include <leo/optimization/solvers/cse/scorers/default_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>
+#include <leo/optimization/solvers/cse/scorers/intersections_scorer.h>
 #include <leo/optimization/solvers/cse/subexpression.h>
 
 // vector covering solver
