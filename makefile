@@ -18,6 +18,9 @@ LEO_SOLVERS = src/leo/optimization/solvers/solver.o \
           src/leo/optimization/solvers/cse/scorers/potential_scorer.o \
           src/leo/optimization/solvers/cse/common_subexpression_solver.o
 
+LEO_OPTIMIZATION = src/leo/optimization/strategy_pool.o \
+                   src/leo/optimization/reducer.o
+
 LEO_FORMATTERS = src/leo/formatters/json_solution_formatter.o \
              src/leo/formatters/plain_text_solution_formatter.o \
              src/leo/formatters/slp_solution_formatter.o
@@ -33,7 +36,7 @@ CLI = src/cli/argument.o src/cli/arg_parser.o
 IO = src/io/expressions_readers/txt_expressions_reader.o \
      src/io/expressions_readers/sms_expressions_reader.o
 
-LEO_OBJECTS = $(LEO_ENTITIES) $(LEO_SELECTORS) $(LEO_SOLVERS) $(LEO_FORMATTERS) $(LEO_UTILS)
+LEO_OBJECTS = $(LEO_ENTITIES) $(LEO_SELECTORS) $(LEO_SOLVERS) $(LEO_OPTIMIZATION) $(LEO_FORMATTERS) $(LEO_UTILS)
 OBJECTS = $(LEO_OBJECTS) $(UTILS) $(CLI) $(IO)
 
 all: main reduce

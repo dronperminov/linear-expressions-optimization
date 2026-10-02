@@ -2,6 +2,7 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
+#include <omp.h>
 #include <random>
 #include <vector>
 #include <leo/leo.h>
@@ -14,20 +15,14 @@
 
 using namespace leo;
 
-void solve(Solver& solver, size_t& bestAdditions, Solution& solution) {
-    size_t additions = solver.solve();
+StrategyPool initVectorCoveringStrategies(const ExpressionsSystem& expressionsSystem) {
+    StrategyPool strategies;
 
-    if (additions < bestAdditions) {
-        bestAdditions = additions;
-        solution = solver.getSolution();
-    }
-}
+    if (expressionsSystem.getExpressionsCount() == 0 || expressionsSystem.getExpressionsCount() < expressionsSystem.getVariablesCount())
+        return strategies;
 
-void reduceVectorCovering(const std::vector<std::vector<int>>& expressions, size_t& bestAdditions, Solution& solution, int maxAbsValue, size_t lowerBound, std::mt19937& generator, int iterations) {
-    if (expressions.empty() || expressions.size() < expressions[0].size())
-        return;
-
-    vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
+    vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true};
+    auto selector = std::make_shared<GreedyAlternativeSelector>();
 
     std::vector<std::shared_ptr<const vector_covering::VectorCoveringScorer>> scorers = {
         std::make_shared<vector_covering::DefaultScorer>(),
@@ -40,57 +35,93 @@ void reduceVectorCovering(const std::vector<std::vector<int>>& expressions, size
         std::make_shared<vector_covering::DefaultScorer>(10000,  300, 0.1, 0.1, 0,  0)
     };
 
+    for (size_t i = 0; i < scorers.size(); i++) {
+        strategies.add("vec/" + std::to_string(i + 1), [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorers[i], selector, seed);
+        });
+    }
+
+    strategies.add("vec/rnd", [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        std::mt19937 generator(seed);
+        std::vector<double> coverWeights = {10000, 1000};
+        std::vector<double> oneStepWeights = {1000, 500, 300, 100};
+        std::vector<double> hammingWeights = {0.0, 0.1, 1.0};
+        std::vector<double> matchesWeights = {0.0, 0.1, 1.0};
+        std::vector<double> distanceWeights = {0.0, 0.1, 1.0, 2.0, 5.0, 10.0};
+        std::vector<double> savingsWeights = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 25.0, 50.0};
+
+        double cover = coverWeights[generator() % coverWeights.size()];
+        double oneStep = oneStepWeights[generator() % oneStepWeights.size()];
+        double hamming = hammingWeights[generator() % hammingWeights.size()];
+        double matches = matchesWeights[generator() % matchesWeights.size()];
+        double distance = distanceWeights[generator() % distanceWeights.size()];
+        double savings = savingsWeights[generator() % savingsWeights.size()];
+
+        auto scorer = std::make_shared<vector_covering::DefaultScorer>(cover, oneStep, hamming, matches, distance, savings);
+        return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer, selector, seed);
+    });
+
+    return strategies;
+}
+
+StrategyPool initCommonSubexpressionsStrategies(const ExpressionsSystem& expressionsSystem) {
+    StrategyPool strategies;
+
     auto selector = std::make_shared<GreedyAlternativeSelector>();
-    vector_covering::VectorCoveringSolver solver(expressions, parameters, scorers[0], selector, generator());
 
-    for (int i = 0; i < iterations && lowerBound < bestAdditions; i++) {
-        solver.setScorer(scorers[generator() % scorers.size()]);
-        solve(solver, bestAdditions, solution);
-    }
+    strategies.add("cse/default", 3, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        auto scorer = std::make_shared<cse::DefaultScorer>();
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, seed);
+    });
+
+    strategies.add("cse/potential", 1, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        std::mt19937 generator(seed);
+        double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
+        auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+    });
+
+    return strategies;
 }
 
-void reduceCSE(const std::vector<std::vector<int>>& expressions, size_t& bestAdditions, Solution& solution, size_t lowerBound, std::mt19937& generator, int iterations) {
-    auto selector = std::make_shared<const GreedyAlternativeSelector>();
+TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
+    TaskPool tasks;
 
-    auto defaultScorer = std::make_shared<cse::DefaultScorer>();
-    auto potentialScorer = std::make_shared<cse::PotentialScorer>(0.3);
-    cse::CommonSubexpressionSolver solver(expressions, defaultScorer, selector, generator());
+    StrategyPool vecStrategies = initVectorCoveringStrategies(expressionsSystem);
+    size_t vecIterations = std::stoull(parser["--vec-iterations"]);
 
-    std::uniform_real_distribution<double> uniform(0.0, 1.0);
+    if (parser["--vec-sampling"] == "sample")
+        tasks.add(vecStrategies.sample(vecIterations, generator));
+    else
+        tasks.add(vecStrategies.each(vecIterations, generator));
 
-    for (int i = 0; i < iterations && lowerBound < bestAdditions; i++) {
-        if (uniform(generator) < 0.25) {
-            potentialScorer->setAlpha(uniform(generator) * 0.6);
-            solver.setScorer(potentialScorer);
-        }
-        else {
-            solver.setScorer(defaultScorer);
-        }
+    StrategyPool cseStrategies = initCommonSubexpressionsStrategies(expressionsSystem);
+    size_t cseIterations = std::stoull(parser["--cse-iterations"]);
 
-        solve(solver, bestAdditions, solution);
-    }
+    if (parser["--cse-sampling"] == "sample")
+        tasks.add(cseStrategies.sample(cseIterations, generator));
+    else
+        tasks.add(cseStrategies.each(cseIterations, generator));
+
+    return tasks;
 }
 
-Solution reduceSystem(const ExpressionsSystem& expressionsSystem, std::mt19937& generator, int vecIterations, int cseIterations) {
-    int maxAbsValue = expressionsSystem.getMaxAbsValue();
-    size_t lowerBound = expressionsSystem.getAdditionsLowerBound();
+Solution reduceSystem(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
+    size_t threads = std::stoull(parser["--threads"]);
+    TaskPool tasks = initTasks(expressionsSystem, parser, generator);
 
-    Solution solution = expressionsSystem.getNaiveSolution();
+    Reducer reducer(expressionsSystem, threads);
+    reducer.reduce(tasks);
+    return reducer.getSolution();
+}
+
+Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& generator, const ArgParser& parser) {
+    Solution solution = reduceSystem(expressionsSystem, parser, generator);
     size_t bestAdditions = solution.getAdditions();
 
-    reduceVectorCovering(expressionsSystem.getExpressions(), bestAdditions, solution, maxAbsValue, lowerBound, generator, vecIterations);
-    reduceCSE(expressionsSystem.getExpressions(), bestAdditions, solution, lowerBound, generator, cseIterations);
-
-    return solution;
-}
-
-Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& generator, int vecIterations, int cseIterations, bool tryTranspose) {
-    Solution solution = reduceSystem(expressionsSystem, generator, vecIterations, cseIterations);
-    size_t bestAdditions = solution.getAdditions();
-
-    if (tryTranspose) {
+    if (parser.isSet("--try-transpose")) {
         ExpressionsSystem transposedSystem(expressionsSystem.getTransposedExpressions());
-        Solution transposed = reduceSystem(transposedSystem, generator, vecIterations, cseIterations);
+        Solution transposed = reduceSystem(transposedSystem, parser, generator);
         SolutionTransposer transposer;
         Solution reversed = transposer.transpose(transposed);
 
@@ -132,6 +163,8 @@ std::unique_ptr<ExpressionsReader> getExpressionsReader(const std::string& path)
 
 int main(int argc, char** argv) {
     ArgParser parser("reduce", "Minimize the number of additions and subtractions required to evaluate a system of linear expressions.");
+    parser.add("--threads", "-t", ArgType::Natural, "Number of OpenMP threads to use", std::to_string(omp_get_max_threads()));
+    parser.add("--seed", "-s", ArgType::UInt, "Random seed; 0 uses a time-based seed", "0");
     parser.add("--quiet", "-q", ArgType::Flag, "Suppress all output to stdout");
 
     parser.addSection("Input / output");
@@ -139,10 +172,11 @@ int main(int argc, char** argv) {
     parser.add("--output-path", "-o", ArgType::Path, "Path to the output file for the resulting solution, or \"stdout\" for standard output", "output.txt");
 
     parser.addSection("Optimization");
-    parser.add("--seed", ArgType::UInt, "Random seed; 0 uses a time-based seed", "0");
     parser.add("--vec-iterations", ArgType::UInt, "Number of iterations of the vector covering solver", "10");
+    parser.addChoices("--vec-sampling", ArgType::String, "Vector covering strategy sampling: \"sample\" (random per iteration) or \"each\" (all strategies)", {"sample", "each"}, "sample");
     parser.add("--cse-iterations", ArgType::UInt, "Number of iterations of the common subexpression solver", "100");
-    parser.add("--try-transpose", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
+    parser.addChoices("--cse-sampling", ArgType::String, "Common subexpression strategy sampling: \"sample\" (random per iteration) or \"each\" (all strategies)", {"sample", "each"}, "sample");
+    parser.add("--try-transpose", "-T", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
 
     parser.addSection("Solution");
     parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
@@ -157,14 +191,11 @@ int main(int argc, char** argv) {
     }
 
     bool quiet = parser.isSet("--quiet");
+    size_t threads = std::stoi(parser["--threads"]);
+    int seed = parser.isSet("--seed") && std::stoi(parser["--seed"]) != 0 ? std::stoi(parser["--seed"]) : time(0);
 
     std::string inputPath = parser["--input-path"];
     std::string outputPath = parser["--output-path"];
-
-    int seed = parser.isSet("--seed") && std::stoi(parser["--seed"]) != 0 ? std::stoi(parser["--seed"]) : time(0);
-    int vecIterations = std::stoi(parser["--vec-iterations"]);
-    int cseIterations = std::stoi(parser["--cse-iterations"]);
-    bool tryTranspose = parser.isSet("--try-transpose");
 
     bool validate = parser.isSet("--validate");
     std::string format = parser["--format"];
@@ -174,10 +205,12 @@ int main(int argc, char** argv) {
         std::cout << "- input path: " << inputPath << std::endl;
         std::cout << "- output path: " << outputPath << std::endl;
         std::cout << "- random seed: " << seed << std::endl;
-        std::cout << "- iterations (vec / cse): " << vecIterations << " / " << cseIterations << std::endl;
-        std::cout << "- try transposing: " << (tryTranspose ? "yes" : "no") << std::endl;
+        std::cout << "- threads: " << threads << std::endl;
+        std::cout << "- iterations (vec / cse): " << std::stoi(parser["--vec-iterations"]) << " / " << std::stoi(parser["--cse-iterations"]) << std::endl;
+        std::cout << "- sampling strategies (vec / cse): " << parser["--vec-sampling"] << " / " << parser["--cse-sampling"] << std::endl;
+        std::cout << "- try transposing: " << (parser.isSet("--try-transpose") ? "yes" : "no") << std::endl;
         std::cout << "- validate solution: " << (validate ? "yes" : "no") << std::endl;
-        std::cout << "- format: " << format << std::endl;
+        std::cout << "- output format: " << format << std::endl;
         std::cout << std::endl;
     }
 
@@ -196,7 +229,7 @@ int main(int argc, char** argv) {
         }
 
         auto t1 = std::chrono::steady_clock::now();
-        Solution solution = reduce(expressionsSystem, generator, vecIterations, cseIterations, tryTranspose);
+        Solution solution = reduce(expressionsSystem, generator, parser);
         auto t2 = std::chrono::steady_clock::now();
 
         if (validate) {

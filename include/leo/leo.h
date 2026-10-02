@@ -41,3 +41,7 @@
 #include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
+
+// strategies
+#include <leo/optimization/strategy_pool.h>
+#include <leo/optimization/reducer.h>
