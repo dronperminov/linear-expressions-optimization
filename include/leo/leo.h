@@ -22,6 +22,7 @@
 #include <leo/optimization/selection/greedy_random_selector.h>
 #include <leo/optimization/selection/greedy_selector.h>
 #include <leo/optimization/selection/score_selector.h>
+#include <leo/optimization/selection/weighted_random_selector.h>
 
 // solvers
 #include <leo/optimization/solvers/solver.h>
@@ -32,6 +33,7 @@
 #include <leo/optimization/solvers/cse/context.h>
 #include <leo/optimization/solvers/cse/scorers/default_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>
+#include <leo/optimization/solvers/cse/scorers/intersections_scorer.h>
 #include <leo/optimization/solvers/cse/subexpression.h>
 
 // vector covering solver
@@ -41,3 +43,7 @@
 #include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
+
+// strategies
+#include <leo/optimization/strategy_pool.h>
+#include <leo/optimization/reducer.h>

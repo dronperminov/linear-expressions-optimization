@@ -6,7 +6,7 @@
 
 namespace leo {
 
-class GreedyAlternativeSelector : public ScoreSelector {
+class WeightedRandomSelector : public ScoreSelector {
 public:
     size_t selectIndex(const std::vector<double>& scores, std::mt19937& generator) const override;
 };

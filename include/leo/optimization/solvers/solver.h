@@ -9,7 +9,7 @@ namespace leo {
 class Solver {
 protected:
     size_t dimension;
-    std::vector<std::vector<int>> expressions;
+    const std::vector<std::vector<int>>& expressions;
     bool solved;
 public:
     Solver(const std::vector<std::vector<int>>& expressions);
