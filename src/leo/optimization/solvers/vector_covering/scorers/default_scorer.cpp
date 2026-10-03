@@ -33,9 +33,14 @@ void DefaultScorer::score(const std::vector<Candidate>& candidates, const Contex
                 continue;
             }
 
-            score -= hammingWeight * canonized.getHammingDistance(target);
-            score += matchesWeight * canonized.getMatchesCount(target);
-            score -= distanceWeight * canonized.getDistance(target);
+            if (hammingWeight > 0)
+                score -= hammingWeight * canonized.getHammingDistance(target);
+
+            if (matchesWeight > 0)
+                score += matchesWeight * canonized.getMatchesCount(target);
+
+            if (distanceWeight > 0)
+                score -= distanceWeight * canonized.getDistance(target);
 
             if (savingsWeight > 0 && canonized.isSubVector(target))
                 score += savingsWeight * (canonized.getSupport() - 1);
