@@ -28,7 +28,8 @@ LEO_FORMATTERS = src/leo/formatters/json_solution_formatter.o \
              src/leo/formatters/slp_solution_formatter.o
 
 LEO_UTILS = src/leo/utils/solution_validator.o \
-        src/leo/utils/solution_transposer.o
+        src/leo/utils/solution_transposer.o \
+        src/leo/utils/solution_sign_optimizer.o
 
 
 UTILS = src/utils.o

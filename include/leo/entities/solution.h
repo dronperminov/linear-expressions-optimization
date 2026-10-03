@@ -13,6 +13,7 @@ struct Solution {
     std::vector<std::vector<Term>> expressions;
 
     size_t getAdditions() const;
+    size_t getInversions() const;
 };
 
 } // namespace leo

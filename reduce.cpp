@@ -129,7 +129,25 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& genera
             solution = reversed;
     }
 
+    if (!parser.isSet("--quiet"))
+        std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
+
     return solution;
+}
+
+Solution optimizeInversions(const Solution& solution, std::mt19937& generator, const ArgParser& parser) {
+    size_t iterations = std::stoull(parser["--optimize-signs-iterations"]);
+    size_t inversionsBefore = solution.getInversions();
+
+    SolutionSignOptimizer optimizer;
+    Solution optimized = optimizer.optimize(solution, generator, iterations);
+
+    size_t inversionsAfter = optimized.getInversions();
+
+    if (!parser.isSet("--quiet"))
+        std::cout << "Number of sign inversions reduced from " << inversionsBefore << " to " << inversionsAfter << std::endl;
+
+    return optimized;
 }
 
 std::unique_ptr<SolutionFormatter> getFormatter(const std::string& path, const std::string& format) {
@@ -180,6 +198,7 @@ int main(int argc, char** argv) {
 
     parser.addSection("Solution");
     parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
+    parser.add("--optimize-signs-iterations", ArgType::UInt, "Number of iterations of the sign inversion optimizer; 0 disables it", "0");
     parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "json", "auto"}, "auto");
 
     if (!parser.parse(argc, argv))
@@ -230,6 +249,10 @@ int main(int argc, char** argv) {
 
         auto t1 = std::chrono::steady_clock::now();
         Solution solution = reduce(expressionsSystem, generator, parser);
+
+        if (parser.isSet("--optimize-signs-iterations"))
+            solution = optimizeInversions(solution, generator, parser);
+
         auto t2 = std::chrono::steady_clock::now();
 
         if (validate) {
@@ -240,10 +263,8 @@ int main(int argc, char** argv) {
                 std::cout << "Solution is valid" << std::endl;
         }
 
-        if (!quiet) {
-            std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
+        if (!quiet)
             std::cout << "Elapsed " << formatDuration(t2 - t1) << std::endl;
-        }
 
         if (outputPath == "stdout") {
             formatter->format(std::cout, solution);
