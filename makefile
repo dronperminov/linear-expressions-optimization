@@ -46,7 +46,7 @@ OBJECTS = $(LEO_OBJECTS) $(UTILS) $(CLI) $(IO)
 all: main reduce
 
 reduce: $(OBJECTS)
-	$(CXX) $(FLAGS) $(OBJECTS) reduce.cpp -o reduce
+	$(CXX) $(FLAGS) $(OBJECTS) src/tools/reduce.cpp -o reduce
 
 main: $(OBJECTS)
 	$(CXX) $(FLAGS) $(OBJECTS) main.cpp -o main

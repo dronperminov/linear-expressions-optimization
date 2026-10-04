@@ -7,11 +7,11 @@
 #include <vector>
 #include <leo/leo.h>
 
-#include "src/cli/arg_parser.h"
-#include "src/io/expressions_reader.h"
-#include "src/io/expressions_readers/txt_expressions_reader.h"
-#include "src/io/expressions_readers/sms_expressions_reader.h"
-#include "src/utils.h"
+#include "../cli/arg_parser.h"
+#include "../io/expressions_reader.h"
+#include "../io/expressions_readers/txt_expressions_reader.h"
+#include "../io/expressions_readers/sms_expressions_reader.h"
+#include "../utils.h"
 
 using namespace leo;
 
