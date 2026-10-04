@@ -12,24 +12,30 @@
 namespace leo {
 
 class Reducer {
-    const ExpressionsSystem& expressionsSystem;
+    struct Group {
+        const ExpressionsSystem* expressionsSystem;
+        size_t lowerBound;
+        Solution solution;
+        size_t additions;
+        std::string strategyName;
+    };
+
+    std::vector<Group> groups;
     size_t threads;
-    size_t lowerBound;
-
-    Solution solution;
-    size_t additions;
-    std::string strategyName;
 public:
-    Reducer(const ExpressionsSystem& expressionsSystem, size_t threads = 1);
+    Reducer(size_t threads = 1);
 
-    bool reduce(const TaskPool& pool);
+    size_t addGroup(const ExpressionsSystem& expressionsSystem);
 
-    size_t getLowerBound() const;
-    size_t getAdditions() const;
-    bool isOptimal() const;
+    bool reduce(const std::vector<TaskPool>& pools);
 
-    const Solution& getSolution() const;
-    const std::string& getStrategyName() const;
+    size_t getGroupsCount() const;
+    size_t getLowerBound(size_t group) const;
+    size_t getAdditions(size_t group) const;
+    bool isOptimal(size_t group) const;
+
+    const Solution& getSolution(size_t group) const;
+    const std::string& getStrategyName(size_t group) const;
 };
 
 } // namespace leo

@@ -106,27 +106,32 @@ TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& 
     return tasks;
 }
 
-Solution reduceSystem(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
+Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
     size_t threads = std::stoull(parser["--threads"]);
-    TaskPool tasks = initTasks(expressionsSystem, parser, generator);
 
-    Reducer reducer(expressionsSystem, threads);
-    reducer.reduce(tasks);
-    return reducer.getSolution();
-}
+    Reducer reducer(threads);
+    std::vector<TaskPool> pools;
 
-Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& generator, const ArgParser& parser) {
-    Solution solution = reduceSystem(expressionsSystem, parser, generator);
-    size_t bestAdditions = solution.getAdditions();
+    reducer.addGroup(expressionsSystem);
+    pools.push_back(initTasks(expressionsSystem, parser, generator));
 
+    std::optional<ExpressionsSystem> transposedSystem;
     if (parser.isSet("--try-transpose")) {
-        ExpressionsSystem transposedSystem(expressionsSystem.getTransposedExpressions());
-        Solution transposed = reduceSystem(transposedSystem, parser, generator);
-        SolutionTransposer transposer;
-        Solution reversed = transposer.transpose(transposed);
+        transposedSystem.emplace(expressionsSystem.getTransposedExpressions());
+        reducer.addGroup(*transposedSystem);
+        pools.push_back(initTasks(*transposedSystem, parser, generator));
+    }
 
-        if (reversed.getAdditions() < bestAdditions)
-            solution = reversed;
+    reducer.reduce(pools);
+
+    Solution solution = reducer.getSolution(0);
+
+    if (transposedSystem) {
+        SolutionTransposer transposer;
+        Solution transposed = transposer.transpose(reducer.getSolution(1));
+
+        if (transposed.getAdditions() < solution.getAdditions())
+            solution = transposed;
     }
 
     if (!parser.isSet("--quiet"))
@@ -164,7 +169,7 @@ Solution inlineSubstitutions(const Solution& solution, const ArgParser& parser) 
     return optimized;
 }
 
-Solution optimizeInversions(const Solution& solution, std::mt19937& generator, const ArgParser& parser) {
+Solution optimizeInversions(const Solution& solution, const ArgParser& parser, std::mt19937& generator) {
     size_t iterations = std::stoull(parser["--optimize-signs-iterations"]);
 
     SolutionSignOptimizer optimizer;
@@ -286,13 +291,13 @@ int main(int argc, char** argv) {
         }
 
         auto t1 = std::chrono::steady_clock::now();
-        Solution solution = reduce(expressionsSystem, generator, parser);
+        Solution solution = reduce(expressionsSystem, parser, generator);
 
         if (parser.isSet("--inline-substitutions"))
             solution = inlineSubstitutions(solution, parser);
 
         if (parser.isSet("--optimize-signs-iterations"))
-            solution = optimizeInversions(solution, generator, parser);
+            solution = optimizeInversions(solution, parser, generator);
 
         auto t2 = std::chrono::steady_clock::now();
 

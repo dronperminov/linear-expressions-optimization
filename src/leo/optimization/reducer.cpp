@@ -3,84 +3,125 @@
 namespace leo {
 
 namespace {
-
 struct ReducerResult {
     size_t additions;
     size_t taskId;
     Solution solution;
 };
 
+struct Job {
+    size_t group;
+    size_t taskId;
+};
 } // namespace
 
-Reducer::Reducer(const ExpressionsSystem& expressionsSystem, size_t threads) : expressionsSystem(expressionsSystem), threads(threads ? threads : 1) {
-    lowerBound = expressionsSystem.getAdditionsLowerBound();
-    solution = expressionsSystem.getNaiveSolution();
-    additions = solution.getAdditions();
-    strategyName = "naive";
+Reducer::Reducer(size_t threads) : threads(threads ? threads : 1) {
+
 }
 
-bool Reducer::reduce(const TaskPool& pool) {
-    if (pool.empty())
+size_t Reducer::addGroup(const ExpressionsSystem& expressionsSystem) {
+    Group group;
+    group.expressionsSystem = &expressionsSystem;
+    group.lowerBound = expressionsSystem.getAdditionsLowerBound();
+    group.solution = expressionsSystem.getNaiveSolution();
+    group.additions = group.solution.getAdditions();
+    group.strategyName = "naive";
+
+    groups.push_back(std::move(group));
+    return groups.size() - 1;
+}
+
+bool Reducer::reduce(const std::vector<TaskPool>& pools) {
+    if (pools.size() != groups.size())
+        throw std::invalid_argument("Reducer::reduce: expected " + std::to_string(groups.size()) + " task pools (one per group), got " + std::to_string(pools.size()));
+
+    std::vector<Job> jobs;
+    for (size_t group = 0; group < pools.size(); group++)
+        for (size_t taskId = 0; taskId < pools[group].size(); taskId++)
+            jobs.push_back({group, taskId});
+
+    if (jobs.empty())
         return false;
 
-    std::atomic<size_t> shared(additions);
-    std::optional<ReducerResult> best = std::nullopt;
+    std::vector<std::atomic<size_t>> shared(groups.size());
+    for (size_t group = 0; group < groups.size(); group++)
+        shared[group] = groups[group].additions;
+
+    std::vector<std::optional<ReducerResult>> best(groups.size(), std::nullopt);
 
     #pragma omp parallel num_threads(threads)
     {
-        std::optional<ReducerResult> localBest = std::nullopt;
+        std::vector<std::optional<ReducerResult>> localBest(groups.size(), std::nullopt);
 
         #pragma omp for schedule(dynamic)
-        for (size_t taskId = 0; taskId < pool.size(); taskId++) {
-            if (shared <= lowerBound)
+        for (size_t jobId = 0; jobId < jobs.size(); jobId++) {
+            const size_t group = jobs[jobId].group;
+            const size_t taskId = jobs[jobId].taskId;
+
+            if (shared[group] <= groups[group].lowerBound)
                 continue;
 
-            const Task& task = pool[taskId];
-            std::unique_ptr<Solver> solver = task.strategy->create(expressionsSystem.getExpressions(), task.seed);
+            const Task& task = pools[group][taskId];
+            std::unique_ptr<Solver> solver = task.strategy->create(groups[group].expressionsSystem->getExpressions(), task.seed);
 
             const size_t solverAdditions = solver->solve();
 
-            if (!localBest || solverAdditions < localBest->additions)
-                localBest = ReducerResult{solverAdditions, taskId, solver->getSolution()};
+            std::optional<ReducerResult>& local = localBest[group];
+            if (solverAdditions < (local ? local->additions : groups[group].additions))
+                local = ReducerResult{solverAdditions, taskId, solver->getSolution()};
 
-            size_t current = shared.load();
-            while (solverAdditions < current && !shared.compare_exchange_weak(current, solverAdditions));
+            size_t current = shared[group].load();
+            while (solverAdditions < current && !shared[group].compare_exchange_weak(current, solverAdditions));
         }
 
         #pragma omp critical
         {
-            if (localBest && (!best || std::tie(localBest->additions, localBest->taskId) < std::tie(best->additions, best->taskId)))
-                best = std::move(localBest);
+            for (size_t group = 0; group < groups.size(); group++) {
+                std::optional<ReducerResult>& local = localBest[group];
+
+                if (local && (!best[group] || std::tie(local->additions, local->taskId) < std::tie(best[group]->additions, best[group]->taskId)))
+                    best[group] = std::move(local);
+            }
         }
     }
 
-    if (!best)
-        return false;
+    bool improved = false;
 
-    additions = best->additions;
-    solution = std::move(best->solution);
-    strategyName = pool[best->taskId].strategy->name;
-    return true;
+    for (size_t group = 0; group < groups.size(); group++) {
+        if (!best[group])
+            continue;
+
+        groups[group].additions = best[group]->additions;
+        groups[group].solution = std::move(best[group]->solution);
+        groups[group].strategyName = pools[group][best[group]->taskId].strategy->name;
+        improved = true;
+    }
+
+    return improved;
 }
 
-size_t Reducer::getLowerBound() const {
-    return lowerBound;
+size_t Reducer::getGroupsCount() const {
+    return groups.size();
 }
 
-size_t Reducer::getAdditions() const {
-    return additions;
+size_t Reducer::getLowerBound(size_t group) const {
+    return groups.at(group).lowerBound;
 }
 
-bool Reducer::isOptimal() const {
-    return additions <= lowerBound;
+size_t Reducer::getAdditions(size_t group) const {
+    return groups.at(group).additions;
 }
 
-const Solution& Reducer::getSolution() const {
-    return solution;
+bool Reducer::isOptimal(size_t group) const {
+    return groups.at(group).additions <= groups.at(group).lowerBound;
 }
 
-const std::string& Reducer::getStrategyName() const {
-    return strategyName;
+const Solution& Reducer::getSolution(size_t group) const {
+    return groups.at(group).solution;
+}
+
+const std::string& Reducer::getStrategyName(size_t group) const {
+    return groups.at(group).strategyName;
 }
 
 } // namespace leo
