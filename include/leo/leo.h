@@ -17,6 +17,7 @@
 #include <leo/utils/solution_validator.h>
 #include <leo/utils/solution_transposer.h>
 #include <leo/utils/solution_sign_optimizer.h>
+#include <leo/utils/solution_substitution_inliner.h>
 
 // selectors
 #include <leo/optimization/selection/greedy_alternative_selector.h>

@@ -135,17 +135,54 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, std::mt19937& genera
     return solution;
 }
 
+Solution inlineSubstitutions(const Solution& solution, const ArgParser& parser) {
+    SolutionSubstitutionInliner inliner;
+    Solution optimized = inliner.optimize(solution);
+
+    size_t substitutionsBefore = solution.substitutions.size();
+    size_t substitutionsAfter = optimized.substitutions.size();
+
+    size_t additionsBefore = solution.getAdditions();
+    size_t additionsAfter = optimized.getAdditions();
+
+    if (!parser.isSet("--quiet")) {
+        std::cout << "Number of substitutions ";
+
+        if (substitutionsAfter < substitutionsBefore) {
+            std::cout << "reduced from " << substitutionsBefore << " to " << substitutionsAfter;
+        }
+        else {
+            std::cout << "remained unchanged: " << substitutionsBefore;
+        }
+
+        if (additionsBefore != additionsAfter)
+            std::cout << ", additions changed to " << additionsAfter;
+
+        std::cout << std::endl;
+    }
+
+    return optimized;
+}
+
 Solution optimizeInversions(const Solution& solution, std::mt19937& generator, const ArgParser& parser) {
     size_t iterations = std::stoull(parser["--optimize-signs-iterations"]);
-    size_t inversionsBefore = solution.getInversions();
 
     SolutionSignOptimizer optimizer;
     Solution optimized = optimizer.optimize(solution, generator, iterations);
 
+    size_t inversionsBefore = solution.getInversions();
     size_t inversionsAfter = optimized.getInversions();
 
-    if (!parser.isSet("--quiet"))
-        std::cout << "Number of sign inversions reduced from " << inversionsBefore << " to " << inversionsAfter << std::endl;
+    if (!parser.isSet("--quiet")) {
+        std::cout << "Number of sign inversions ";
+
+        if (inversionsAfter < inversionsBefore) {
+            std::cout << "reduced from " << inversionsBefore << " to " << inversionsAfter << std::endl;
+        }
+        else {
+            std::cout << "remained unchanged: " << inversionsBefore << std::endl;
+        }
+    }
 
     return optimized;
 }
@@ -199,6 +236,7 @@ int main(int argc, char** argv) {
     parser.addSection("Solution");
     parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
     parser.add("--optimize-signs-iterations", ArgType::UInt, "Number of iterations of the sign inversion optimizer; 0 disables it", "0");
+    parser.add("--inline-substitutions", ArgType::Flag, "Inline substitutions that occur only once");
     parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "json", "auto"}, "auto");
 
     if (!parser.parse(argc, argv))
@@ -249,6 +287,9 @@ int main(int argc, char** argv) {
 
         auto t1 = std::chrono::steady_clock::now();
         Solution solution = reduce(expressionsSystem, generator, parser);
+
+        if (parser.isSet("--inline-substitutions"))
+            solution = inlineSubstitutions(solution, parser);
 
         if (parser.isSet("--optimize-signs-iterations"))
             solution = optimizeInversions(solution, generator, parser);

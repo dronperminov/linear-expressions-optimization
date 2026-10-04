@@ -36,4 +36,4 @@ size_t Solution::getInversions() const {
     return inversions;
 }
 
-}
+} // namepsace leo
