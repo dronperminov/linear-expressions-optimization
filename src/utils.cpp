@@ -41,3 +41,18 @@ std::string formatDuration(std::chrono::steady_clock::duration duration) {
 
     return oss.str();
 }
+
+std::string replace(const std::string& str, const std::string& from, const std::string& to) {
+    if (from.empty())
+        return str;
+
+    std::string result = str;
+    size_t start = result.find(from);
+
+    while (start != std::string::npos) {
+        result.replace(start, from.length(), to);
+        start = result.find(from, start + to.length());
+    }
+
+    return result;
+}

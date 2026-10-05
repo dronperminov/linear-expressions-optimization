@@ -28,6 +28,7 @@ StrategyPool initVectorCoveringStrategies(const ExpressionsSystem& expressionsSy
         std::make_shared<vector_covering::DefaultScorer>(),
         std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0,   0, 0,  0),
         std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0,   0, 0,  5),
+        std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0, 0.1, 0,  0),
         std::make_shared<vector_covering::DefaultScorer>(10000,  300,   0,   1, 2,  5),
         std::make_shared<vector_covering::DefaultScorer>(10000,  300,   0,   1, 5, 50),
         std::make_shared<vector_covering::DefaultScorer>(10000, 1000,   0, 0.1, 0,  5),
@@ -221,6 +222,20 @@ std::unique_ptr<ExpressionsReader> getExpressionsReader(const std::string& path)
     return std::make_unique<TxtExpressionsReader>();
 }
 
+std::string replaceTemplates(const std::string& path, const Solution& solution) {
+    std::string additions = std::to_string(solution.getAdditions());
+    std::string inversions = std::to_string(solution.getInversions());
+    std::string substitutions = std::to_string(solution.substitutions.size());
+    std::string dimension = std::to_string(solution.dimension);
+
+    std::string replaced = replace(path, "{additions}", additions);
+    replaced = replace(replaced, "{inversions}", inversions);
+    replaced = replace(replaced, "{substitutions}", substitutions);
+    replaced = replace(replaced, "{dimension}", dimension);
+
+    return replaced;
+}
+
 int main(int argc, char** argv) {
     ArgParser parser("reduce", "Minimize the number of additions and subtractions required to evaluate a system of linear expressions.");
     parser.add("--threads", "-t", ArgType::Natural, "Number of OpenMP threads to use", std::to_string(omp_get_max_threads()));
@@ -316,12 +331,13 @@ int main(int argc, char** argv) {
             formatter->format(std::cout, solution);
         }
         else {
-            std::ofstream fout(outputPath);
+            std::string replacedPath = replaceTemplates(outputPath, solution);
+            std::ofstream fout(replacedPath);
             formatter->format(fout, solution);
             fout.close();
 
             if (!quiet)
-                std::cout << "Solution saved to \"" << outputPath << "\"" << std::endl;
+                std::cout << "Solution saved to \"" << replacedPath << "\"" << std::endl;
         }
     }
     catch (const std::exception& exception) {
