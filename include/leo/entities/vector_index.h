@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <leo/entities/substitution.h>

@@ -1,6 +1,8 @@
 #include <leo/optimization/strategy_presets.h>
 
+#include <cstdint>
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -36,8 +38,8 @@ StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, b
     };
 
     for (size_t i = 0; i < scorers.size(); i++) {
-        strategies.add("vec/" + std::to_string(i + 1), [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorers[i], selector, seed);
+        strategies.add("vec/" + std::to_string(i + 1), [scorer = scorers[i], parameters, selector](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer, selector, seed);
         });
     }
 

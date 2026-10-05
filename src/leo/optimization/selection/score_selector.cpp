@@ -1,5 +1,7 @@
 #include <leo/optimization/selection/score_selector.h>
 
+#include <algorithm>
+
 namespace leo {
 
 double ScoreSelector::getMaxScore(const std::vector<double>& scores) const {

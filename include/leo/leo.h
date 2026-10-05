@@ -6,6 +6,7 @@
 #include <leo/entities/substitution.h>
 #include <leo/entities/term.h>
 #include <leo/entities/vector.h>
+#include <leo/entities/vector_index.h>
 
 // formatters
 #include <leo/formatters/json_solution_formatter.h>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <iostream>
+#include <ostream>
 #include <vector>
 
 #include <leo/entities/solution.h>

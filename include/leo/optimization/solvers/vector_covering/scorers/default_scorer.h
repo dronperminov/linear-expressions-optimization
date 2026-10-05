@@ -1,7 +1,9 @@
 #pragma once
 
-#include <unordered_map>
+#include <vector>
 
+#include <leo/optimization/solvers/vector_covering/candidate.h>
+#include <leo/optimization/solvers/vector_covering/context.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 
 namespace leo::vector_covering {

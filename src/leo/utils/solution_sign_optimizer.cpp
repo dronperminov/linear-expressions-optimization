@@ -1,5 +1,6 @@
 #include <leo/utils/solution_sign_optimizer.h>
 
+#include <cmath>
 #include <unordered_set>
 
 #include <leo/entities/term.h>

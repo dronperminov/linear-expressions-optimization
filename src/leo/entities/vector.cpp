@@ -1,6 +1,8 @@
 #include <leo/entities/vector.h>
 
+#include <algorithm>
 #include <cmath>
+#include <functional>
 #include <stdexcept>
 
 namespace leo {

@@ -1,5 +1,6 @@
 #include "arg_parser.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 

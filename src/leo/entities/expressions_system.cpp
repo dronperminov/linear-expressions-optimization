@@ -1,5 +1,7 @@
 #include <leo/entities/expressions_system.h>
 
+#include <algorithm>
+#include <cstdlib>
 #include <unordered_set>
 
 #include <leo/entities/solution.h>

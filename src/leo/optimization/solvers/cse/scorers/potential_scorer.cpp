@@ -1,5 +1,7 @@
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>
 
+#include <algorithm>
+
 namespace leo::cse {
 
 PotentialScorer::PotentialScorer(double alpha) {

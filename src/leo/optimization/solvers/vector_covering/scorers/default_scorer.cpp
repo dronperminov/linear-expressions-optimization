@@ -1,5 +1,7 @@
 #include <leo/optimization/solvers/vector_covering/scorers/default_scorer.h>
 
+#include <unordered_map>
+
 namespace leo::vector_covering {
 
 DefaultScorer::DefaultScorer() {

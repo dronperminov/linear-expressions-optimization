@@ -1,10 +1,14 @@
 #include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <omp.h>
+#include <optional>
 #include <random>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <leo/leo.h>
@@ -197,12 +201,12 @@ int main(int argc, char** argv) {
 
     if (parser["--output-path"] == "stdout" && parser["--format"] == "auto") {
         std::cerr << "Format \"auto\" cannot be used with stdout. Specify the format explicitly." << std::endl;
-        return 0;
+        return -1;
     }
 
     bool quiet = parser.isSet("--quiet");
     size_t threads = std::stoi(parser["--threads"]);
-    int seed = parser.isSet("--seed") && std::stoi(parser["--seed"]) != 0 ? std::stoi(parser["--seed"]) : time(0);
+    uint32_t seed = parser.isSet("--seed") && std::stoul(parser["--seed"]) != 0 ? std::stoul(parser["--seed"]) : time(0);
 
     std::string inputPath = parser["--input-path"];
     std::string outputPath = parser["--output-path"];
@@ -233,7 +237,7 @@ int main(int argc, char** argv) {
         ExpressionsSystem expressionsSystem = reader->read(inputPath);
 
         if (!quiet) {
-            std::cout << "Readed system of expressions:" << std::endl;
+            std::cout << "Read system of expressions:" << std::endl;
             expressionsSystem.describe(std::cout);
             std::cout << std::endl;
         }

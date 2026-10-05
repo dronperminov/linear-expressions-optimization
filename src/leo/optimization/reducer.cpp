@@ -75,7 +75,8 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools) {
                 local = ReducerResult{solverAdditions, taskId, solver->getSolution()};
 
             size_t current = shared[group].load();
-            while (solverAdditions < current && !shared[group].compare_exchange_weak(current, solverAdditions));
+            while (solverAdditions < current && !shared[group].compare_exchange_weak(current, solverAdditions))
+                ;
         }
 
         #pragma omp critical
