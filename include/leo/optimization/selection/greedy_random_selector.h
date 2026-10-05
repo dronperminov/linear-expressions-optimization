@@ -1,7 +1,7 @@
 #pragma once
 
 #include <random>
-#include <stdexcept>
+#include <vector>
 
 #include <leo/optimization/selection/score_selector.h>
 

@@ -1,9 +1,10 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <random>
-#include <stdexcept>
 #include <string>
 #include <vector>
 

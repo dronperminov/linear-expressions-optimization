@@ -1,5 +1,8 @@
 #pragma once
 
+#include <random>
+#include <vector>
+
 #include <leo/optimization/selection/score_selector.h>
 
 namespace leo {

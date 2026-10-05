@@ -1,5 +1,9 @@
 #include <leo/optimization/reducer.h>
 
+#include <atomic>
+#include <optional>
+#include <stdexcept>
+
 namespace leo {
 
 namespace {

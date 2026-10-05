@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include <cstddef>
 #include <vector>
 
 #include <leo/entities/solution.h>

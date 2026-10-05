@@ -1,5 +1,11 @@
 #include <leo/entities/expressions_system.h>
 
+#include <unordered_set>
+
+#include <leo/entities/solution.h>
+#include <leo/entities/vector.h>
+#include <leo/utils/solution_validator.h>
+
 namespace leo {
 
 ExpressionsSystem::ExpressionsSystem(const std::vector<std::vector<int>>& expressions) : expressions(expressions) {
@@ -49,6 +55,18 @@ int ExpressionsSystem::getMaxAbsValue() const {
             maxAbsValue = std::max(maxAbsValue, std::abs(value));
 
     return maxAbsValue;
+}
+
+bool ExpressionsSystem::isVertical() const {
+    return count > dimension;
+}
+
+bool ExpressionsSystem::isHorizontal() const {
+    return count < dimension;
+}
+
+bool ExpressionsSystem::isSquare() const {
+    return count == dimension;
 }
 
 const std::vector<std::vector<int>>& ExpressionsSystem::getExpressions() const {

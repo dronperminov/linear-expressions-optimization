@@ -1,11 +1,10 @@
 #pragma once
 
+#include <cstddef>
 #include <random>
 #include <vector>
-#include <unordered_set>
 
 #include <leo/entities/solution.h>
-#include <leo/entities/term.h>
 
 namespace leo {
 

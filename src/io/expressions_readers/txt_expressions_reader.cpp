@@ -1,5 +1,10 @@
 #include "txt_expressions_reader.h"
 
+#include <fstream>
+#include <sstream>
+
+#include "../../utils.h"
+
 leo::ExpressionsSystem TxtExpressionsReader::read(const std::string& path) const {
     std::ifstream f(path);
     if (!f)

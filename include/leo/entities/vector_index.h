@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdexcept>
+#include <cstddef>
 #include <unordered_map>
 #include <vector>
 

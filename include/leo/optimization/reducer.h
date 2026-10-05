@@ -1,9 +1,8 @@
 #pragma once
 
-#include <atomic>
-#include <exception>
-#include <optional>
-#include <stdexcept>
+#include <cstddef>
+#include <string>
+#include <vector>
 
 #include <leo/entities/expressions_system.h>
 #include <leo/entities/solution.h>

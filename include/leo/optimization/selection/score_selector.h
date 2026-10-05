@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <random>
+#include <vector>
 
 namespace leo {
 

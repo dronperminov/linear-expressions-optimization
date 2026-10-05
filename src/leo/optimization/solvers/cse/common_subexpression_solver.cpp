@@ -1,5 +1,7 @@
 #include <leo/optimization/solvers/cse/common_subexpression_solver.h>
 
+#include <stdexcept>
+
 namespace leo::cse {
 
 CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, std::shared_ptr<const CommonSubexpressionScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {

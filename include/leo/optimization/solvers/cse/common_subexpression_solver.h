@@ -1,17 +1,14 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <random>
-#include <stdexcept>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include <leo/entities/solution.h>
 #include <leo/entities/substitution.h>
 #include <leo/optimization/selection/score_selector.h>
 #include <leo/optimization/solvers/cse/common_subexpression_scorer.h>
-#include <leo/optimization/solvers/cse/context.h>
 #include <leo/optimization/solvers/cse/subexpression.h>
 #include <leo/optimization/solvers/solver.h>
 

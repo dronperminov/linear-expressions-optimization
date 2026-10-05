@@ -1,5 +1,7 @@
 #include <leo/optimization/strategy_pool.h>
 
+#include <stdexcept>
+
 namespace leo {
 
 void TaskPool::add(Task task) {

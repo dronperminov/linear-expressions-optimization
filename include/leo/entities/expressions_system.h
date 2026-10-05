@@ -1,12 +1,10 @@
 #pragma once
 
+#include <cstddef>
 #include <iostream>
 #include <vector>
-#include <unordered_set>
 
 #include <leo/entities/solution.h>
-#include <leo/entities/vector.h>
-#include <leo/utils/solution_validator.h>
 
 namespace leo {
 
@@ -23,6 +21,10 @@ public:
     size_t getAdditionsLowerBound() const;
 
     int getMaxAbsValue() const;
+
+    bool isVertical() const;
+    bool isHorizontal() const;
+    bool isSquare() const;
 
     const std::vector<std::vector<int>>& getExpressions() const;
     std::vector<std::vector<int>> getTransposedExpressions() const;

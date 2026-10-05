@@ -1,5 +1,9 @@
 #include <leo/utils/solution_sign_optimizer.h>
 
+#include <unordered_set>
+
+#include <leo/entities/term.h>
+
 namespace leo {
 
 SolutionSignOptimizer::SolutionSignOptimizer(double startTemp, double endTemp, size_t stepsPerVariable) : startTemp(startTemp), endTemp(endTemp), stepsPerVariable(stepsPerVariable) {

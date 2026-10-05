@@ -1,10 +1,12 @@
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <omp.h>
 #include <random>
 #include <vector>
+
 #include <leo/leo.h>
 
 #include "../cli/arg_parser.h"

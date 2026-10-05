@@ -1,5 +1,8 @@
 #include <leo/utils/solution_validator.h>
 
+#include <leo/entities/substitution.h>
+#include <leo/entities/term.h>
+
 namespace leo {
 
 bool SolutionValidator::validate(const std::vector<std::vector<int>>& expressions, const Solution& solution) const {

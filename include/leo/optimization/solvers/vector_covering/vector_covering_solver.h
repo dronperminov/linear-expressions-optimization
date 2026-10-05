@@ -1,8 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <random>
-#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -13,7 +13,6 @@
 #include <leo/optimization/selection/score_selector.h>
 #include <leo/optimization/solvers/solver.h>
 #include <leo/optimization/solvers/vector_covering/candidate.h>
-#include <leo/optimization/solvers/vector_covering/context.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 

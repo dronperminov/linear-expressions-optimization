@@ -1,5 +1,10 @@
 #include "argument.h"
 
+#include <algorithm>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+
 Argument::Argument(const std::string& longName, const std::string& shortName, ArgType type, const std::string& description, const std::string& section, const std::vector<std::string>& choices, const std::string& defaultValue, bool required) {
     this->longName = longName;
     this->shortName = shortName;

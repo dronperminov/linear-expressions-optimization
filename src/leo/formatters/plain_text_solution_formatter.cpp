@@ -1,5 +1,12 @@
 #include <leo/formatters/plain_text_solution_formatter.h>
 
+#include <cstddef>
+#include <sstream>
+#include <vector>
+
+#include <leo/entities/substitution.h>
+#include <leo/entities/term.h>
+
 namespace leo {
 
 PlainTextSolutionFormatter::PlainTextSolutionFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName, size_t start) {

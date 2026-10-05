@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include <leo/optimization/solvers/cse/common_subexpression_scorer.h>
+#include <leo/optimization/solvers/cse/context.h>
 
 namespace leo::cse {
 

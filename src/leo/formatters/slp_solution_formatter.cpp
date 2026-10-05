@@ -1,5 +1,12 @@
 #include <leo/formatters/slp_solution_formatter.h>
 
+#include <cstddef>
+#include <sstream>
+#include <vector>
+
+#include <leo/entities/substitution.h>
+#include <leo/entities/term.h>
+
 namespace leo {
 
 SlpSolutionFormatter::SlpSolutionFormatter(const std::string& inputVarName, const std::string& outputVarName, const std::string& newVarName, size_t start) {

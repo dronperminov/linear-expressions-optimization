@@ -1,5 +1,7 @@
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
 
+#include <stdexcept>
+
 namespace leo::vector_covering {
 
 VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {

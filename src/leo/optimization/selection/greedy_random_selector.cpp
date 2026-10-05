@@ -1,5 +1,7 @@
 #include <leo/optimization/selection/greedy_random_selector.h>
 
+#include <stdexcept>
+
 namespace leo {
 
 GreedyRandomSelector::GreedyRandomSelector(double randomProbability) {

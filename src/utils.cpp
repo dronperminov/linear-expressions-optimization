@@ -1,5 +1,9 @@
 #include "utils.h"
 
+#include <cstddef>
+#include <iomanip>
+#include <sstream>
+
 bool isBlankOrComment(const std::string& line) {
     size_t index = line.find_first_not_of(" \t\r\n");
     return index == std::string::npos || line.empty() || line[index] == '#';

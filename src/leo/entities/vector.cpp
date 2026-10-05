@@ -1,5 +1,8 @@
 #include <leo/entities/vector.h>
 
+#include <cmath>
+#include <stdexcept>
+
 namespace leo {
 
 Vector::Vector(const std::vector<int>& values) : values(values) {

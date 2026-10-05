@@ -17,7 +17,7 @@ namespace leo::presets {
 StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem) {
     StrategyPool strategies;
 
-    if (expressionsSystem.getExpressionsCount() == 0 || expressionsSystem.getExpressionsCount() < expressionsSystem.getVariablesCount())
+    if (expressionsSystem.isHorizontal())
         return strategies;
 
     vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true};

@@ -1,5 +1,7 @@
 #include <leo/utils/solution_substitution_inliner.h>
 
+#include <algorithm>
+
 namespace leo {
 
 Solution SolutionSubstitutionInliner::optimize(const Solution& solution) const {

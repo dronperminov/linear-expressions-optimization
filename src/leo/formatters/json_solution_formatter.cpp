@@ -1,5 +1,11 @@
 #include <leo/formatters/json_solution_formatter.h>
 
+#include <cstddef>
+#include <vector>
+
+#include <leo/entities/substitution.h>
+#include <leo/entities/term.h>
+
 namespace leo {
 
 JsonSolutionFormatter::JsonSolutionFormatter() {

@@ -1,5 +1,7 @@
 #include <leo/entities/vector_index.h>
 
+#include <stdexcept>
+
 namespace leo {
 
 VectorIndex::VectorIndex(size_t dimension) {
