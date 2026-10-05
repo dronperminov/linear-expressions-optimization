@@ -48,4 +48,5 @@
 
 // strategies
 #include <leo/optimization/strategy_pool.h>
+#include <leo/optimization/strategy_presets.h>
 #include <leo/optimization/reducer.h>
