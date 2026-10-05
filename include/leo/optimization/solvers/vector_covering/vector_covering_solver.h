@@ -50,6 +50,7 @@ private:
     void updateCandidates();
     void addCandidate(const Candidate& candidate);
 
+    void addTargetPairs();
     void fallbackToNaive();
     void removeUnused();
 };

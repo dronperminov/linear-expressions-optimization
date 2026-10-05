@@ -5,7 +5,7 @@
 
 namespace leo::presets {
 
-StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem);
+StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, bool addTargetPairs);
 StrategyPool cseDefault(const ExpressionsSystem& expressionsSystem);
 
 } // leo::presets

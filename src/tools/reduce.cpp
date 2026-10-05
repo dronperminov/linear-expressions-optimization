@@ -20,7 +20,7 @@ using namespace leo;
 TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
     TaskPool tasks;
 
-    StrategyPool vecStrategies = leo::presets::vectorCoveringDefault(expressionsSystem);
+    StrategyPool vecStrategies = leo::presets::vectorCoveringDefault(expressionsSystem, parser.isSet("--vec-add-target-pairs"));
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
 
     if (parser["--vec-sampling"] == "sample")
@@ -179,6 +179,7 @@ int main(int argc, char** argv) {
     parser.add("--output-path", "-o", ArgType::Path, "Path to the output file for the resulting solution, or \"stdout\" for standard output", "output.txt");
 
     parser.addSection("Optimization");
+    parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors that can be obtained with one addition or subtraction (xi +/- xj)");
     parser.add("--vec-iterations", ArgType::UInt, "Number of iterations of the vector covering solver", "10");
     parser.addChoices("--vec-sampling", ArgType::String, "Vector covering strategy sampling: \"sample\" (random per iteration) or \"each\" (all strategies)", {"sample", "each"}, "sample");
     parser.add("--cse-iterations", ArgType::UInt, "Number of iterations of the common subexpression solver", "100");

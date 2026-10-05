@@ -14,13 +14,13 @@
 
 namespace leo::presets {
 
-StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem) {
+StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, bool addTargetPairs) {
     StrategyPool strategies;
 
     if (expressionsSystem.isHorizontal())
         return strategies;
 
-    vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true};
+    vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true, addTargetPairs};
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
     std::vector<std::shared_ptr<const vector_covering::VectorCoveringScorer>> scorers = {
