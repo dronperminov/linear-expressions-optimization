@@ -35,7 +35,7 @@ size_t Reducer::addGroup(const ExpressionsSystem& expressionsSystem) {
     return groups.size() - 1;
 }
 
-bool Reducer::reduce(const std::vector<TaskPool>& pools) {
+bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest) {
     if (pools.size() != groups.size())
         throw std::invalid_argument("Reducer::reduce: expected " + std::to_string(groups.size()) + " task pools (one per group), got " + std::to_string(pools.size()));
 
@@ -67,6 +67,9 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools) {
 
             const Task& task = pools[group][taskId];
             std::unique_ptr<Solver> solver = task.strategy->create(groups[group].expressionsSystem->getExpressions(), task.seed);
+
+            if (boundByBest && shared[group] < groups[group].additions)
+                solver->setBound(shared[group]);
 
             const size_t solverAdditions = solver->solve();
 

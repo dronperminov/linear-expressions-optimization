@@ -38,8 +38,8 @@ StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, b
     };
 
     for (size_t i = 0; i < scorers.size(); i++) {
-        strategies.add("vec/" + std::to_string(i + 1), [scorer = scorers[i], parameters, selector](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer, selector, seed);
+        strategies.add("vec/" + std::to_string(i + 1), [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorers[i], selector, seed);
         });
     }
 
@@ -66,7 +66,7 @@ StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, b
     return strategies;
 }
 
-StrategyPool cseDefault(const ExpressionsSystem& expressionsSystem) {
+StrategyPool cseDefault(double potentialWeight) {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
@@ -76,12 +76,14 @@ StrategyPool cseDefault(const ExpressionsSystem& expressionsSystem) {
         return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, seed);
     });
 
-    strategies.add("cse/potential", 1, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-        std::mt19937 generator(seed);
-        double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
-        auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
-        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
-    });
+    if (potentialWeight > 0) {
+        strategies.add("cse/potential", potentialWeight, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+            std::mt19937 generator(seed);
+            double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
+            auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
+            return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+        });
+    }
 
     return strategies;
 }

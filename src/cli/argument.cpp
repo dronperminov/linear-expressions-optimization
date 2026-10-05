@@ -63,7 +63,7 @@ std::string Argument::getTypeHint() const {
         return "<natural>";
 
     if (type == ArgType::UInt)
-        return "<int>";
+        return "<uint>";
 
     if (type == ArgType::Real)
         return "<real>";

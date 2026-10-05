@@ -26,7 +26,7 @@ public:
 
     size_t addGroup(const ExpressionsSystem& expressionsSystem);
 
-    bool reduce(const std::vector<TaskPool>& pools);
+    bool reduce(const std::vector<TaskPool>& pools, bool boundByBest = false);
 
     size_t getGroupsCount() const;
     size_t getLowerBound(size_t group) const;

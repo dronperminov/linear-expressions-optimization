@@ -24,16 +24,17 @@ using namespace leo;
 TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
     TaskPool tasks;
 
-    StrategyPool vecStrategies = leo::presets::vectorCoveringDefault(expressionsSystem, parser.isSet("--vec-add-target-pairs"));
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
+    StrategyPool vecStrategies = leo::presets::vectorCoveringDefault(expressionsSystem, parser.isSet("--vec-add-target-pairs"));
 
     if (parser["--vec-sampling"] == "sample")
         tasks.add(vecStrategies.sample(vecIterations, generator));
     else
         tasks.add(vecStrategies.each(vecIterations, generator));
 
-    StrategyPool cseStrategies = leo::presets::cseDefault(expressionsSystem);
     size_t cseIterations = std::stoull(parser["--cse-iterations"]);
+    double potentialWeight = std::stod(parser["--cse-potential-weight"]);
+    StrategyPool cseStrategies = leo::presets::cseDefault(potentialWeight);
 
     if (parser["--cse-sampling"] == "sample")
         tasks.add(cseStrategies.sample(cseIterations, generator));
@@ -59,7 +60,7 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
         pools.push_back(initTasks(*transposedSystem, parser, generator));
     }
 
-    reducer.reduce(pools);
+    reducer.reduce(pools, parser.isSet("--bound-by-best"));
 
     Solution solution = reducer.getSolution(0);
 
@@ -179,22 +180,28 @@ int main(int argc, char** argv) {
     parser.add("--quiet", "-q", ArgType::Flag, "Suppress all output to stdout");
 
     parser.addSection("Input / output");
-    parser.add("--input-path", "-i", ArgType::Path, "Path to the input file containing linear expressions", "", true);
-    parser.add("--output-path", "-o", ArgType::Path, "Path to the output file for the resulting solution, or \"stdout\" for standard output", "output.txt");
+    parser.add("--input-path", "-i", ArgType::Path, "Input file with linear expressions", "", true);
+    parser.add("--output-path", "-o", ArgType::Path, "Output file path, or \"stdout\" to print the solution", "output.txt");
+    parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "json", "auto"}, "auto");
 
-    parser.addSection("Optimization");
-    parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors that can be obtained with one addition or subtraction (xi +/- xj)");
-    parser.add("--vec-iterations", ArgType::UInt, "Number of iterations of the vector covering solver", "10");
-    parser.addChoices("--vec-sampling", ArgType::String, "Vector covering strategy sampling: \"sample\" (random per iteration) or \"each\" (all strategies)", {"sample", "each"}, "sample");
-    parser.add("--cse-iterations", ArgType::UInt, "Number of iterations of the common subexpression solver", "100");
-    parser.addChoices("--cse-sampling", ArgType::String, "Common subexpression strategy sampling: \"sample\" (random per iteration) or \"each\" (all strategies)", {"sample", "each"}, "sample");
+    parser.addSection("Solving strategy");
+    parser.add("--bound-by-best", "-b", ArgType::Flag, "Use the best solution found so far as an upper bound for subsequent solvers");
     parser.add("--try-transpose", "-T", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
 
-    parser.addSection("Solution");
-    parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
-    parser.add("--optimize-signs-iterations", ArgType::UInt, "Number of iterations of the sign inversion optimizer; 0 disables it", "0");
+    parser.addSection("Vector covering solver");
+    parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
+    parser.add("--vec-iterations", ArgType::UInt, "Number of iterations", "10");
+    parser.addChoices("--vec-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
+
+    parser.addSection("Common subexpression (CSE) solver");
+    parser.add("--cse-iterations", ArgType::UInt, "Number of iterations", "100");
+    parser.addChoices("--cse-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
+    parser.add("--cse-potential-weight", ArgType::Real, "Weight of the greedy-potential strategy", "1.0");
+
+    parser.addSection("Post-processing");
     parser.add("--inline-substitutions", ArgType::Flag, "Inline substitutions that occur only once");
-    parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "json", "auto"}, "auto");
+    parser.add("--optimize-signs-iterations", ArgType::UInt, "Number of iterations of the sign inversion optimizer; 0 disables it", "0");
+    parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
 
     if (!parser.parse(argc, argv))
         return 0;

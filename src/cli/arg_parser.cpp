@@ -111,7 +111,13 @@ bool ArgParser::isSet(const std::string& name) const {
 void ArgParser::help() const {
     std::cout << description << std::endl;
     std::cout << std::endl;
-    std::cout << "Usage: " << name << " [ARGS...]" << std::endl;
+    std::cout << "Usage: " << name;
+
+    for (const Argument& argument : arguments)
+        if (argument.required)
+            std::cout << " " << argument.shortName << " " << argument.getTypeHint();
+
+    std::cout << " [ARGS...]" << std::endl;
 
     std::unordered_map<std::string, std::vector<Argument>> section2args;
 
