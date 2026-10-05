@@ -44,6 +44,11 @@ void VectorCoveringSolver::setSelector(std::shared_ptr<const ScoreSelector> sele
 size_t VectorCoveringSolver::solve() {
     initialize();
 
+    if (parameters.addTargetPairs)
+        addTargetPairs();
+
+    initializeCandidates();
+
     while (!uncovered.empty() && steps.size() <= bound && (!parameters.naiveFallback || steps.size() <= naiveComplexity)) {
         scorer->score(candidates, {uncovered, vectors}, scores);
         size_t index = selector->selectIndex(scores, generator);
@@ -113,11 +118,6 @@ void VectorCoveringSolver::initialize() {
         pool[basis.getCanonized()] = i;
         vectors.emplace_back(basis);
     }
-
-    if (parameters.addTargetPairs)
-        addTargetPairs();
-
-    initializeCandidates();
 }
 
 void VectorCoveringSolver::initializeCandidates() {
