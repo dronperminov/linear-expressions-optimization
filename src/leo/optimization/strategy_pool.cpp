@@ -43,13 +43,20 @@ TaskPool StrategyPool::sample(size_t count, std::mt19937& generator) const {
     if (strategies.empty())
         return pool;
 
+    if (count >= strategies.size()) {
+        for (size_t i = 0; i < strategies.size(); i++) {
+            uint32_t seed = generator();
+            pool.add({strategies[i], seed});
+        }
+    }
+
     std::vector<double> weights;
     for (const auto& strategy : strategies)
         weights.push_back(strategy->weight);
 
     std::discrete_distribution<size_t> distribution(weights.begin(), weights.end());
 
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = pool.size(); i < count; i++) {
         size_t index = distribution(generator);
         uint32_t seed = generator();
         pool.add({strategies[index], seed});
