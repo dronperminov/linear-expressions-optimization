@@ -38,6 +38,10 @@ void StrategyPool::add(std::string name, SolverFactory create) {
     add(std::move(name), 1.0, std::move(create));
 }
 
+void StrategyPool::add(const StrategyPool& pool) {
+    strategies.insert(strategies.end(), pool.strategies.begin(), pool.strategies.end());
+}
+
 TaskPool StrategyPool::sample(size_t count, std::mt19937& generator) const {
     TaskPool pool;
     if (strategies.empty())

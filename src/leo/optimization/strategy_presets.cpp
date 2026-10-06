@@ -4,13 +4,16 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <leo/optimization/selection/greedy_alternative_selector.h>
 #include <leo/optimization/solvers/cse/common_subexpression_solver.h>
 #include <leo/optimization/solvers/cse/scorers/default_scorer.h>
+#include <leo/optimization/solvers/cse/scorers/intersections_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>
 #include <leo/optimization/solvers/vector_covering/scorers/default_scorer.h>
+#include <leo/optimization/solvers/vector_covering/scorers/distance_scorer.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
 
@@ -25,28 +28,28 @@ StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, b
     vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true, addTargetPairs};
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
-    std::vector<std::shared_ptr<const vector_covering::VectorCoveringScorer>> scorers = {
-        std::make_shared<vector_covering::DefaultScorer>(),
-        std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0,   0, 0,  0),
-        std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0,   0, 0,  5),
-        std::make_shared<vector_covering::DefaultScorer>(1000,   100,   0, 0.1, 0,  0),
-        std::make_shared<vector_covering::DefaultScorer>(10000,  300,   0,   1, 2,  5),
-        std::make_shared<vector_covering::DefaultScorer>(10000,  300,   0,   1, 5, 50),
-        std::make_shared<vector_covering::DefaultScorer>(10000, 1000,   0, 0.1, 0,  5),
-        std::make_shared<vector_covering::DefaultScorer>(10000, 1000, 0.1,   1, 1,  0),
-        std::make_shared<vector_covering::DefaultScorer>(10000,  300, 0.1, 0.1, 0,  0)
+    std::vector<std::pair<std::string, std::shared_ptr<const vector_covering::VectorCoveringScorer>>> scorers = {
+        {"vec/1", std::make_shared<vector_covering::DefaultScorer>()},
+        {"vec/2", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0,  0.0, 0.0, 0.0)},
+        {"vec/3", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0,  0.0, 0.0, 5.0)},
+        {"vec/4", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0,  0.1, 0.0, 0.0)},
+        {"vec/5", std::make_shared<vector_covering::DefaultScorer>(1000.0,  30.0,  0.0,  0.1, 0.2, 0.5)},
+        {"vec/6", std::make_shared<vector_covering::DefaultScorer>(1000.0,  30.0,  0.0,  0.1, 0.5, 5.0)},
+        {"vec/7", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0, 0.01, 0.0, 0.5)},
+        {"vec/8", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0, 0.01,  0.1, 0.1, 0.0)},
+        {"vec/9", std::make_shared<vector_covering::DefaultScorer>(1000.0,  30.0, 0.01, 0.01, 0.0, 0.0)}
     };
 
-    for (size_t i = 0; i < scorers.size(); i++) {
-        strategies.add("vec/" + std::to_string(i + 1), [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorers[i], selector, seed);
+    for (const auto& scorer : scorers) {
+        strategies.add(scorer.first, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer.second, selector, seed);
         });
     }
 
     strategies.add("vec/rnd", [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
         std::mt19937 generator(seed);
-        std::vector<double> coverWeights = {10000, 1000};
-        std::vector<double> oneStepWeights = {1000, 500, 300, 100};
+        std::vector<double> coverWeights = {10000.0, 1000.0};
+        std::vector<double> oneStepWeights = {1000.0, 500.0, 300.0, 100.0};
         std::vector<double> hammingWeights = {0.0, 0.1, 1.0};
         std::vector<double> matchesWeights = {0.0, 0.1, 1.0};
         std::vector<double> distanceWeights = {0.0, 0.1, 1.0, 2.0, 5.0, 10.0};
@@ -66,24 +69,105 @@ StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, b
     return strategies;
 }
 
-StrategyPool cseDefault(double potentialWeight) {
+StrategyPool vectorCoveringDistance(const ExpressionsSystem& expressionsSystem, bool addTargetPairs) {
+    StrategyPool strategies;
+
+    if (expressionsSystem.isHorizontal())
+        return strategies;
+
+    vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true, addTargetPairs};
+    auto selector = std::make_shared<GreedyAlternativeSelector>();
+
+    std::vector<std::pair<std::string, std::shared_ptr<const vector_covering::VectorCoveringScorer>>> scorers = {
+        {"vec/dst1", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0, 0.0)},
+        {"vec/dst2", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0, 1.0)},
+    };
+
+    for (const auto& scorer : scorers) {
+        strategies.add(scorer.first, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer.second, selector, seed);
+        });
+    }
+
+    return strategies;
+}
+
+StrategyPool vectorCoveringAll(const ExpressionsSystem& expressionsSystem, bool addTargetPairs) {
+    StrategyPool strategies;
+    strategies.add(vectorCoveringDistance(expressionsSystem, addTargetPairs));
+    strategies.add(vectorCoveringDefault(expressionsSystem, addTargetPairs));
+
+    return strategies;
+}
+
+StrategyPool cseVanilla() {
+    StrategyPool strategies;
+
+    auto selector = std::make_shared<GreedyAlternativeSelector>();
+    auto scorer = std::make_shared<cse::DefaultScorer>();
+
+    strategies.add("cse/vanilla", [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, seed);
+    });
+
+    return strategies;
+}
+
+StrategyPool csePotential() {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
-    strategies.add("cse/default", 3, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+    strategies.add("cse/potential", [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        std::mt19937 generator(seed);
+        double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
+        auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+    });
+
+    return strategies;
+}
+
+StrategyPool cseIntersections() {
+    StrategyPool strategies;
+
+    auto selector = std::make_shared<GreedyAlternativeSelector>();
+
+    strategies.add("cse/intersections", [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        std::mt19937 generator(seed);
+        double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
+        double beta = std::uniform_real_distribution<double>(0.5, 1.0)(generator);
+        auto scorer = std::make_shared<cse::IntersectionsScorer>(alpha, beta);
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+    });
+
+    return strategies;
+}
+
+StrategyPool cseAll() {
+    StrategyPool strategies;
+
+    auto selector = std::make_shared<GreedyAlternativeSelector>();
+
+    strategies.add("cse/vanilla", 3, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
         auto scorer = std::make_shared<cse::DefaultScorer>();
         return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, seed);
     });
 
-    if (potentialWeight > 0) {
-        strategies.add("cse/potential", potentialWeight, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-            std::mt19937 generator(seed);
-            double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
-            auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
-            return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
-        });
-    }
+    strategies.add("cse/potential", 1, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        std::mt19937 generator(seed);
+        double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
+        auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+    });
+
+    strategies.add("cse/intersections", 1, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
+        std::mt19937 generator(seed);
+        double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
+        double beta = std::uniform_real_distribution<double>(0.5, 1.0)(generator);
+        auto scorer = std::make_shared<cse::IntersectionsScorer>(alpha, beta);
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+    });
 
     return strategies;
 }

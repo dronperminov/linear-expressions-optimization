@@ -2,6 +2,7 @@
 
 // entities
 #include <leo/entities/expressions_system.h>
+#include <leo/entities/hash_set.h>
 #include <leo/entities/solution.h>
 #include <leo/entities/substitution.h>
 #include <leo/entities/term.h>
@@ -43,6 +44,7 @@
 #include <leo/optimization/solvers/vector_covering/candidate.h>
 #include <leo/optimization/solvers/vector_covering/context.h>
 #include <leo/optimization/solvers/vector_covering/scorers/default_scorer.h>
+#include <leo/optimization/solvers/vector_covering/scorers/distance_scorer.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
