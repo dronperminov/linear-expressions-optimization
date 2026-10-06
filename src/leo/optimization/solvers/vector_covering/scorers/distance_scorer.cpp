@@ -6,7 +6,7 @@
 
 namespace leo::vector_covering {
 
-DistanceScorer::DistanceScorer(double gainWeight, double tieWeight, double savingsWeight, int supportSlack) : gainWeight(gainWeight), tieWeight(tieWeight), savingsWeight(savingsWeight), supportSlack(supportSlack) {
+DistanceScorer::DistanceScorer(double gainWeight, double tieWeight, double savingsWeight, double coverWeight, int supportSlack) : gainWeight(gainWeight), tieWeight(tieWeight), savingsWeight(savingsWeight), coverWeight(coverWeight), supportSlack(supportSlack) {
 
 }
 
@@ -54,7 +54,7 @@ void DistanceScorer::score(const std::vector<Candidate>& candidates, const Conte
         size_t gain3 = getGain(hash, near3, ones);
         size_t gain4 = getGain(hash, far4, twos);
 
-        double gain = gain2 + gain3 + gain4;
+        double gain = coverWeight * gain2 + gain3 + gain4;
         double tie = 3.0 * gain2 + 5.0 * gain3 + 7.0 * gain4;
         double score = gainWeight * gain - tieWeight * tie;
 

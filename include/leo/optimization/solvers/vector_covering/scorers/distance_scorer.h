@@ -20,9 +20,10 @@ class DistanceScorer : public VectorCoveringScorer {
     double gainWeight;
     double tieWeight;
     double savingsWeight;
+    double coverWeight;
     int supportSlack;
 public:
-    DistanceScorer(double gainWeight = 1000.0, double tieWeight = 1.0, double savingsWeight = 0.0, int supportSlack = 2);
+    DistanceScorer(double gainWeight = 1000.0, double tieWeight = 1.0, double savingsWeight = 0.0, double coverWeight = 10.0, int supportSlack = 2);
 
     void score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const override;
 private:

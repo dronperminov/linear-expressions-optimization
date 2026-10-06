@@ -85,18 +85,26 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
     reducer.reduce(pools, parser.isSet("--bound-by-best"));
 
     Solution solution = reducer.getSolution(0);
+    std::string strategyName = reducer.getStrategyName(0);
 
     if (transposedSystem) {
         SolutionTransposer transposer;
         Solution transposed = transposer.transpose(reducer.getSolution(1));
 
-        if (transposed.getAdditions() < solution.getAdditions())
+        if (transposed.getAdditions() < solution.getAdditions()) {
             solution = transposed;
+            strategyName = reducer.getStrategyName(1) + " (transposed)";
+        }
     }
 
     if (!parser.isSet("--quiet")) {
         std::cout << "Solution:" << std::endl;
         std::cout << "- solution has " << solution.getAdditions() << " additions" << std::endl;
+
+        if (solution.getAdditions() <= expressionsSystem.getAdditionsLowerBound())
+            std::cout << "- solution is optimal" << std::endl;
+
+        std::cout << "- best strategy: " << strategyName << std::endl;
     }
 
     return solution;

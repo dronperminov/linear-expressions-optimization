@@ -79,8 +79,8 @@ StrategyPool vectorCoveringDistance(const ExpressionsSystem& expressionsSystem, 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
     std::vector<std::pair<std::string, std::shared_ptr<const vector_covering::VectorCoveringScorer>>> scorers = {
-        {"vec/dst1", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0, 0.0)},
-        {"vec/dst2", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0, 1.0)},
+        {"vec/dst1", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0,  0.0, 10.0, 2)},
+        {"vec/dst2", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0, 0.01, 10.0, 2)}
     };
 
     for (const auto& scorer : scorers) {
