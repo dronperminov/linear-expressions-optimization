@@ -49,7 +49,8 @@ private:
 
     void initializeCandidates();
     void updateCandidates();
-    void addCandidate(const Candidate& candidate);
+    void addCandidate(size_t i, size_t j, int sign);
+    void useCandidate(const Candidate& candidate);
 
     void addTargetPairs();
     void fallbackToNaive();

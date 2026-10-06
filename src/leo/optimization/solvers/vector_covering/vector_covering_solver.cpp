@@ -52,7 +52,7 @@ size_t VectorCoveringSolver::solve() {
     while (!uncovered.empty() && steps.size() <= bound && (!parameters.naiveFallback || steps.size() <= naiveComplexity)) {
         scorer->score(candidates, {uncovered, vectors}, scores);
         size_t index = selector->selectIndex(scores, generator);
-        addCandidate(candidates[index]);
+        useCandidate(candidates[index]);
 
         if (!uncovered.empty()) {
             updateCandidates();
@@ -127,43 +127,35 @@ void VectorCoveringSolver::initializeCandidates() {
     for (const auto& pair : pool)
         unique.insert(pair.first);
 
-    for (size_t i = 0; i < vectors.size(); i++) {
-        for (size_t j = i + 1; j < vectors.size(); j++) {
-            for (int sign : {1, -1}) {
-                Vector vector = vectors[i].addScaled(vectors[j], sign);
-                Vector canonized = vector.getCanonized();
-
-                if (unique.find(canonized) != unique.end())
-                    continue;
-
-                unique.insert(canonized);
-                candidates.push_back({{i, j, 1, sign}, vector, canonized});
-            }
-        }
-    }
+    for (size_t i = 0; i < vectors.size(); i++)
+        for (size_t j = i + 1; j < vectors.size(); j++)
+            for (int sign : {1, -1})
+                addCandidate(i, j, sign);
 }
 
 void VectorCoveringSolver::updateCandidates() {
     size_t j = vectors.size() - 1;
 
-    for (size_t i = 0; i < j; i++) {
-        for (int sign : {1, -1}) {
-            Vector vector = vectors[i].addScaled(vectors.back(), sign);
-            Vector canonized = vector.getCanonized();
-
-            if (unique.find(canonized) != unique.end())
-                continue;
-
-            if (parameters.maxAbsValue > 0 && vector.getMaxAbs() > parameters.maxAbsValue)
-                continue;
-
-            unique.insert(canonized);
-            candidates.push_back({{i, j, 1, sign}, vector, canonized});
-        }
-    }
+    for (size_t i = 0; i < j; i++)
+        for (int sign : {1, -1})
+            addCandidate(i, j, sign);
 }
 
-void VectorCoveringSolver::addCandidate(const Candidate& candidate) {
+void VectorCoveringSolver::addCandidate(size_t i, size_t j, int sign) {
+    Vector vector = vectors[i].addScaled(vectors[j], sign);
+    Vector canonized = vector.getCanonized();
+
+    if (unique.find(canonized) != unique.end())
+        return;
+
+    if (parameters.maxAbsValue > 0 && vector.getMaxAbs() > parameters.maxAbsValue)
+        return;
+
+    unique.insert(canonized);
+    candidates.push_back({{i, j, 1, sign}, vector, canonized});
+}
+
+void VectorCoveringSolver::useCandidate(const Candidate& candidate) {
     pool[candidate.canonized] = pool.size();
     vectors.push_back(candidate.vector);
     steps.push_back(candidate.step);
@@ -184,7 +176,7 @@ void VectorCoveringSolver::addTargetPairs() {
         Vector vector = vectors[i] * target[i] + vectors[j] * target[j];
         Vector canonized = vector.getCanonized();
 
-        addCandidate({{i, j, target[i], target[j]}, vector, canonized});
+        useCandidate({{i, j, target[i], target[j]}, vector, canonized});
     }
 }
 
@@ -207,7 +199,7 @@ void VectorCoveringSolver::fallbackToNaive() {
 
             auto result = pool.find(canonized);
             if (result == pool.end()) {
-                addCandidate({{i, j, ai, aj}, vector, canonized});
+                useCandidate({{i, j, ai, aj}, vector, canonized});
                 i = vectors.size() - 1;
             }
             else {
