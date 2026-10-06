@@ -1,5 +1,9 @@
 #include "argument.h"
 
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+
 Argument::Argument(const std::string& longName, const std::string& shortName, ArgType type, const std::string& description, const std::string& section, const std::vector<std::string>& choices, const std::string& defaultValue, bool required) {
     this->longName = longName;
     this->shortName = shortName;
@@ -59,7 +63,7 @@ std::string Argument::getTypeHint() const {
         return "<natural>";
 
     if (type == ArgType::UInt)
-        return "<int>";
+        return "<uint>";
 
     if (type == ArgType::Real)
         return "<real>";

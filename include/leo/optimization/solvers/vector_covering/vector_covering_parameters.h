@@ -6,6 +6,7 @@ struct VectorCoveringParameters {
     int maxAbsValue;
     bool naiveFallback;
     bool removeUnused;
+    bool addTargetPairs;
 };
 
 } // namespace leo::vector_covering

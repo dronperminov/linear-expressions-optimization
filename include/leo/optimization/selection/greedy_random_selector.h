@@ -1,21 +1,21 @@
 #pragma once
 
+#include <cstddef>
 #include <random>
-#include <stdexcept>
+#include <vector>
 
 #include <leo/optimization/selection/score_selector.h>
 
 namespace leo {
 
 class GreedyRandomSelector : public ScoreSelector {
-    std::mt19937& generator;
     double randomProbability;
 public:
-    GreedyRandomSelector(std::mt19937& generator, double randomProbability);
+    GreedyRandomSelector(double randomProbability);
 
     void setRandomProbability(double randomProbability);
 
-    size_t selectIndex(const std::vector<double>& scores) const override;
+    size_t selectIndex(const std::vector<double>& scores, std::mt19937& generator) const override;
 };
 
 } // namespace leo

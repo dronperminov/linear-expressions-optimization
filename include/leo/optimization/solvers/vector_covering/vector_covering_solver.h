@@ -1,6 +1,9 @@
 #pragma once
 
-#include <stdexcept>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <random>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -11,7 +14,6 @@
 #include <leo/optimization/selection/score_selector.h>
 #include <leo/optimization/solvers/solver.h>
 #include <leo/optimization/solvers/vector_covering/candidate.h>
-#include <leo/optimization/solvers/vector_covering/context.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 
@@ -19,31 +21,38 @@ namespace leo::vector_covering {
 
 class VectorCoveringSolver : public Solver {
     VectorCoveringParameters parameters;
-    const VectorCoveringScorer* scorer;
-    const ScoreSelector* selector;
+    std::shared_ptr<const VectorCoveringScorer> scorer;
+    std::shared_ptr<const ScoreSelector> selector;
+    std::mt19937 generator;
 
     size_t naiveComplexity;
     std::unordered_set<Vector> targets;
+
     std::unordered_set<Vector> uncovered;
     std::unordered_map<Vector, size_t> pool;
     std::vector<Vector> vectors;
     std::vector<Substitution> steps;
     std::vector<double> scores;
+    std::vector<Candidate> candidates;
+    std::unordered_set<Vector> unique;
 public:
-    VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, const VectorCoveringScorer& scorer, const ScoreSelector& selector);
+    VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed);
 
     void setParameters(const VectorCoveringParameters& parameters);
-    void setScorer(const VectorCoveringScorer& scorer);
-    void setSelector(const ScoreSelector& selector);
+    void setScorer(std::shared_ptr<const VectorCoveringScorer> scorer);
+    void setSelector(std::shared_ptr<const ScoreSelector> selector);
 
     size_t solve() override;
     Solution getSolution() const override;
 private:
     void initialize();
 
-    std::vector<Candidate> getCandidates() const;
-    void addCandidate(const Candidate& candidate);
+    void initializeCandidates();
+    void updateCandidates();
+    void addCandidate(size_t i, size_t j, int sign);
+    void useCandidate(const Candidate& candidate);
 
+    void addTargetPairs();
     void fallbackToNaive();
     void removeUnused();
 };

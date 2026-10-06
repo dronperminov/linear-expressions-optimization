@@ -1,10 +1,8 @@
 #pragma once
 
-#include <iostream>
+#include <ostream>
 
 #include <leo/entities/solution.h>
-#include <leo/entities/substitution.h>
-#include <leo/entities/term.h>
 
 namespace leo {
 

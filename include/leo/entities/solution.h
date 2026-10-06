@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <vector>
 
 #include <leo/entities/substitution.h>
@@ -13,6 +14,7 @@ struct Solution {
     std::vector<std::vector<Term>> expressions;
 
     size_t getAdditions() const;
+    size_t getInversions() const;
 };
 
 } // namespace leo

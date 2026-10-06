@@ -1,17 +1,16 @@
 #pragma once
 
+#include <cstddef>
 #include <random>
+#include <vector>
 
 #include <leo/optimization/selection/score_selector.h>
 
 namespace leo {
 
 class GreedyAlternativeSelector : public ScoreSelector {
-    std::mt19937& generator;
 public:
-    GreedyAlternativeSelector(std::mt19937& generator);
-
-    size_t selectIndex(const std::vector<double>& scores) const override;
+    size_t selectIndex(const std::vector<double>& scores, std::mt19937& generator) const override;
 };
 
 } // namespace leo
