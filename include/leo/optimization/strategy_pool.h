@@ -42,6 +42,7 @@ class StrategyPool {
 public:
     void add(std::string name, double weight, SolverFactory create);
     void add(std::string name, SolverFactory create);
+    void add(const StrategyPool& pool);
 
     TaskPool sample(size_t count, std::mt19937& generator) const;
     TaskPool each(size_t repeats, std::mt19937& generator) const;

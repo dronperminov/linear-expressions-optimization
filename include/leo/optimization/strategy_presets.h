@@ -6,6 +6,12 @@
 namespace leo::presets {
 
 StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, bool addTargetPairs);
-StrategyPool cseDefault(double potentialWeight);
+StrategyPool vectorCoveringDistance(const ExpressionsSystem& expressionsSystem, bool addTargetPairs);
+StrategyPool vectorCoveringAll(const ExpressionsSystem& expressionsSystem, bool addTargetPairs);
+
+StrategyPool cseVanilla();
+StrategyPool csePotential();
+StrategyPool cseIntersections();
+StrategyPool cseAll();
 
 } // leo::presets
