@@ -8,8 +8,8 @@ namespace leo {
 
 class HashSet {
     std::vector<uint64_t> table;
-    std::vector<bool> states;
-    uint64_t mask;
+    std::vector<uint64_t> states;
+    size_t mask;
 public:
     HashSet(size_t capacity);
 
@@ -17,6 +17,7 @@ public:
     bool contains(uint64_t key) const;
 private:
     size_t key2index(uint64_t key) const;
+    bool getState(size_t index) const;
 };
 
 } // namespace leo
