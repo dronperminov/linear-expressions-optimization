@@ -21,11 +21,34 @@
 
 using namespace leo;
 
+StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSystem, const std::string& preset, bool addTargetPairs) {
+    if (preset == "default")
+        return presets::vectorCoveringDefault(expressionsSystem, addTargetPairs);
+
+    if (preset == "distance")
+        return presets::vectorCoveringDistance(expressionsSystem, addTargetPairs);
+
+    return presets::vectorCoveringAll(expressionsSystem, addTargetPairs);
+}
+
+StrategyPool getCommonSubexpressionStrategies(const std::string& preset) {
+    if (preset == "vanilla")
+        return presets::cseVanilla();
+
+    if (preset == "potential")
+        return presets::csePotential();
+
+    if (preset == "intersections")
+        return presets::cseIntersections();
+
+    return presets::cseAll();
+}
+
 TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
     TaskPool tasks;
 
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
-    StrategyPool vecStrategies = leo::presets::vectorCoveringDefault(expressionsSystem, parser.isSet("--vec-add-target-pairs"));
+    StrategyPool vecStrategies = getVectorCoveringStrategies(expressionsSystem, parser["--vec-preset"], parser.isSet("--vec-add-target-pairs"));
 
     if (parser["--vec-sampling"] == "sample")
         tasks.add(vecStrategies.sample(vecIterations, generator));
@@ -33,8 +56,7 @@ TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& 
         tasks.add(vecStrategies.each(vecIterations, generator));
 
     size_t cseIterations = std::stoull(parser["--cse-iterations"]);
-    double potentialWeight = std::stod(parser["--cse-potential-weight"]);
-    StrategyPool cseStrategies = leo::presets::cseDefault(potentialWeight);
+    StrategyPool cseStrategies = getCommonSubexpressionStrategies(parser["--cse-preset"]);
 
     if (parser["--cse-sampling"] == "sample")
         tasks.add(cseStrategies.sample(cseIterations, generator));
@@ -63,17 +85,27 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
     reducer.reduce(pools, parser.isSet("--bound-by-best"));
 
     Solution solution = reducer.getSolution(0);
+    std::string strategyName = reducer.getStrategyName(0);
 
     if (transposedSystem) {
         SolutionTransposer transposer;
         Solution transposed = transposer.transpose(reducer.getSolution(1));
 
-        if (transposed.getAdditions() < solution.getAdditions())
+        if (transposed.getAdditions() < solution.getAdditions()) {
             solution = transposed;
+            strategyName = reducer.getStrategyName(1) + " (transposed)";
+        }
     }
 
-    if (!parser.isSet("--quiet"))
-        std::cout << "Optimized solution has " << solution.getAdditions() << " additions" << std::endl;
+    if (!parser.isSet("--quiet")) {
+        std::cout << "Solution:" << std::endl;
+        std::cout << "- solution has " << solution.getAdditions() << " additions" << std::endl;
+
+        if (solution.getAdditions() <= expressionsSystem.getAdditionsLowerBound())
+            std::cout << "- solution is optimal" << std::endl;
+
+        std::cout << "- best strategy: " << strategyName << std::endl;
+    }
 
     return solution;
 }
@@ -89,7 +121,7 @@ Solution inlineSubstitutions(const Solution& solution, const ArgParser& parser) 
     size_t additionsAfter = optimized.getAdditions();
 
     if (!parser.isSet("--quiet")) {
-        std::cout << "Number of substitutions ";
+        std::cout << "- number of substitutions ";
 
         if (substitutionsAfter < substitutionsBefore) {
             std::cout << "reduced from " << substitutionsBefore << " to " << substitutionsAfter;
@@ -117,7 +149,7 @@ Solution optimizeInversions(const Solution& solution, const ArgParser& parser, s
     size_t inversionsAfter = optimized.getInversions();
 
     if (!parser.isSet("--quiet")) {
-        std::cout << "Number of sign inversions ";
+        std::cout << "- number of sign inversions ";
 
         if (inversionsAfter < inversionsBefore) {
             std::cout << "reduced from " << inversionsBefore << " to " << inversionsAfter << std::endl;
@@ -177,7 +209,7 @@ int main(int argc, char** argv) {
     ArgParser parser("reduce", "Minimize the number of additions and subtractions required to evaluate a system of linear expressions.");
     parser.add("--threads", "-t", ArgType::Natural, "Number of OpenMP threads to use", std::to_string(omp_get_max_threads()));
     parser.add("--seed", "-s", ArgType::UInt, "Random seed; 0 uses a time-based seed", "0");
-    parser.add("--quiet", "-q", ArgType::Flag, "Suppress all output to stdout");
+    parser.add("--quiet", "-q", ArgType::Flag, "Suppress all output to stdout (explicit --print-* options still print)");
 
     parser.addSection("Input / output");
     parser.add("--input-path", "-i", ArgType::Path, "Input file with linear expressions", "", true);
@@ -190,18 +222,23 @@ int main(int argc, char** argv) {
 
     parser.addSection("Vector covering solver");
     parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
+    parser.addChoices("--vec-preset", ArgType::String, "Strategues preset", {"default", "distance", "all"}, "all");
     parser.add("--vec-iterations", ArgType::UInt, "Number of iterations", "10");
     parser.addChoices("--vec-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
 
     parser.addSection("Common subexpression (CSE) solver");
+    parser.addChoices("--cse-preset", ArgType::String, "Strategues preset", {"vanilla", "potential", "intersections", "all"}, "all");
     parser.add("--cse-iterations", ArgType::UInt, "Number of iterations", "100");
     parser.addChoices("--cse-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
-    parser.add("--cse-potential-weight", ArgType::Real, "Weight of the greedy-potential strategy", "1.0");
 
     parser.addSection("Post-processing");
     parser.add("--inline-substitutions", ArgType::Flag, "Inline substitutions that occur only once");
     parser.add("--optimize-signs-iterations", ArgType::UInt, "Number of iterations of the sign inversion optimizer; 0 disables it", "0");
     parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
+
+    parser.addSection("Diagnostics");
+    parser.add("--print-args", ArgType::Flag, "Print parsed command-line arguments to stdout");
+    parser.add("--print-system-stats", ArgType::Flag, "Print statistics of the parsed system of expressions");
 
     if (!parser.parse(argc, argv))
         return 0;
@@ -217,21 +254,54 @@ int main(int argc, char** argv) {
 
     std::string inputPath = parser["--input-path"];
     std::string outputPath = parser["--output-path"];
-
-    bool validate = parser.isSet("--validate");
     std::string format = parser["--format"];
 
-    if (!quiet) {
+    size_t cseIterations = std::stoull(parser["--cse-iterations"]);
+    size_t vecIterations = std::stoull(parser["--vec-iterations"]);
+
+    if (parser.isSet("--print-args")) {
         std::cout << "Parsed parameters:" << std::endl;
+        std::cout << "- threads: " << threads << std::endl;
+        std::cout << "- random seed: " << seed << std::endl;
+        std::cout << std::endl;
+        std::cout << "Input / output:" << std::endl;
         std::cout << "- input path: " << inputPath << std::endl;
         std::cout << "- output path: " << outputPath << std::endl;
-        std::cout << "- random seed: " << seed << std::endl;
-        std::cout << "- threads: " << threads << std::endl;
-        std::cout << "- iterations (vec / cse): " << std::stoi(parser["--vec-iterations"]) << " / " << std::stoi(parser["--cse-iterations"]) << std::endl;
-        std::cout << "- sampling strategies (vec / cse): " << parser["--vec-sampling"] << " / " << parser["--cse-sampling"] << std::endl;
-        std::cout << "- try transposing: " << (parser.isSet("--try-transpose") ? "yes" : "no") << std::endl;
-        std::cout << "- validate solution: " << (validate ? "yes" : "no") << std::endl;
         std::cout << "- output format: " << format << std::endl;
+        std::cout << std::endl;
+        std::cout << "Solving strategy:" << std::endl;
+        std::cout << "- try transposing: " << (parser.isSet("--try-transpose") ? "yes" : "no") << std::endl;
+        std::cout << "- bound by best: " << (parser.isSet("--bound-by-best") ? "yes" : "no") << std::endl;
+        std::cout << std::endl;
+        std::cout << "- Vector covering solver:";
+        if (vecIterations > 0) {
+            std::cout << std::endl;
+            std::cout << "  - add target pairs: " << (parser.isSet("--vec-add-target-pairs") ? "yes" : "no") << std::endl;
+            std::cout << "  - preset: " << parser["--vec-preset"] << std::endl;
+            std::cout << "  - iterations: " << vecIterations << std::endl;
+            std::cout << "  - sampling strategy: " << parser["--vec-sampling"] << std::endl;
+        }
+        else {
+            std::cout << " not used" << std::endl;
+        }
+
+        std::cout << std::endl;
+        std::cout << "- Common subexpression (CSE) solver:";
+        if (cseIterations) {
+            std::cout << std::endl;
+            std::cout << "  - preset: " << parser["--cse-preset"] << std::endl;
+            std::cout << "  - iterations: " << cseIterations << std::endl;
+            std::cout << "  - sampling strategy: " << parser["--cse-sampling"] << std::endl;
+        }
+        else {
+            std::cout << " not used" << std::endl;
+        }
+
+        std::cout << std::endl;
+        std::cout << "Postprocessing:" << std::endl;
+        std::cout << "- inline substitutions: " << (parser.isSet("--inline-substitutions") ? "yes" : "no") << std::endl;
+        std::cout << "- optimize inversions: " << (std::stoul(parser["--optimize-signs-iterations"]) > 0 ? "yes (" + parser["--optimize-signs-iterations"] + " iterations)" : "no") << std::endl;
+        std::cout << "- validate solution: " << (parser.isSet("--validate") ? "yes" : "no") << std::endl;
         std::cout << std::endl;
     }
 
@@ -243,7 +313,7 @@ int main(int argc, char** argv) {
 
         ExpressionsSystem expressionsSystem = reader->read(inputPath);
 
-        if (!quiet) {
+        if (parser.isSet("--print-system-stats")) {
             std::cout << "Read system of expressions:" << std::endl;
             expressionsSystem.describe(std::cout);
             std::cout << std::endl;
@@ -255,21 +325,21 @@ int main(int argc, char** argv) {
         if (parser.isSet("--inline-substitutions"))
             solution = inlineSubstitutions(solution, parser);
 
-        if (parser.isSet("--optimize-signs-iterations"))
+        if (std::stoull(parser["--optimize-signs-iterations"]) > 0)
             solution = optimizeInversions(solution, parser, generator);
 
         auto t2 = std::chrono::steady_clock::now();
 
-        if (validate) {
+        if (parser.isSet("--validate")) {
             if (!expressionsSystem.validateSolution(solution))
                 throw std::runtime_error("solution is not valid");
 
             if (!quiet)
-                std::cout << "Solution is valid" << std::endl;
+                std::cout << "- solution is valid" << std::endl;
         }
 
         if (!quiet)
-            std::cout << "Elapsed " << formatDuration(t2 - t1) << std::endl;
+            std::cout << "- elapsed " << formatDuration(t2 - t1) << std::endl;
 
         if (outputPath == "stdout") {
             formatter->format(std::cout, solution);
@@ -281,7 +351,7 @@ int main(int argc, char** argv) {
             fout.close();
 
             if (!quiet)
-                std::cout << "Solution saved to \"" << replacedPath << "\"" << std::endl;
+                std::cout << "- saved to \"" << replacedPath << "\"" << std::endl;
         }
     }
     catch (const std::exception& exception) {
