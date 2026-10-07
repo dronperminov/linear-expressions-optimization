@@ -9,14 +9,14 @@ HashSet::HashSet(size_t capacity) {
         size <<= 1;
 
     table.assign(size, 0);
+    states.assign(size, false);
     mask = size - 1;
 }
 
 void HashSet::insert(uint64_t key) {
-    key = normalize(key);
-
     size_t i = key2index(key);
-    while (table[i] != 0) {
+
+    while (states[i]) {
         if (table[i] == key)
             return;
 
@@ -24,20 +24,15 @@ void HashSet::insert(uint64_t key) {
     }
 
     table[i] = key;
+    states[i] = true;
 }
 
 bool HashSet::contains(uint64_t key) const {
-    key = normalize(key);
-
-    for (size_t i = key2index(key); table[i] != 0; i = (i + 1) & mask)
+    for (size_t i = key2index(key); states[i]; i = (i + 1) & mask)
         if (table[i] == key)
             return true;
 
     return false;
-}
-
-uint64_t HashSet::normalize(uint64_t key) const {
-    return key == 0 ? key - 1 : key;
 }
 
 size_t HashSet::key2index(uint64_t key) const {
