@@ -12,20 +12,16 @@
 #include <leo/optimization/solvers/cse/scorers/default_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/intersections_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>
+#include <leo/optimization/solvers/vector_covering/parameters.h>
 #include <leo/optimization/solvers/vector_covering/scorers/default_scorer.h>
 #include <leo/optimization/solvers/vector_covering/scorers/distance_scorer.h>
-#include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
 
 namespace leo::presets {
 
-StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, bool addTargetPairs) {
+StrategyPool vectorCoveringDefault(const leo::vector_covering::Parameters& parameters) {
     StrategyPool strategies;
 
-    if (expressionsSystem.isHorizontal())
-        return strategies;
-
-    vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true, addTargetPairs};
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
     std::vector<std::pair<std::string, std::shared_ptr<const vector_covering::VectorCoveringScorer>>> scorers = {
@@ -69,13 +65,9 @@ StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, b
     return strategies;
 }
 
-StrategyPool vectorCoveringDistance(const ExpressionsSystem& expressionsSystem, bool addTargetPairs) {
+StrategyPool vectorCoveringDistance(const leo::vector_covering::Parameters& parameters) {
     StrategyPool strategies;
 
-    if (expressionsSystem.isHorizontal())
-        return strategies;
-
-    vector_covering::VectorCoveringParameters parameters = {expressionsSystem.getMaxAbsValue(), true, true, addTargetPairs};
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
     std::vector<std::pair<std::string, std::shared_ptr<const vector_covering::VectorCoveringScorer>>> scorers = {
@@ -92,10 +84,10 @@ StrategyPool vectorCoveringDistance(const ExpressionsSystem& expressionsSystem, 
     return strategies;
 }
 
-StrategyPool vectorCoveringAll(const ExpressionsSystem& expressionsSystem, bool addTargetPairs) {
+StrategyPool vectorCoveringAll(const leo::vector_covering::Parameters& parameters) {
     StrategyPool strategies;
-    strategies.add(vectorCoveringDistance(expressionsSystem, addTargetPairs));
-    strategies.add(vectorCoveringDefault(expressionsSystem, addTargetPairs));
+    strategies.add(vectorCoveringDistance(parameters));
+    strategies.add(vectorCoveringDefault(parameters));
 
     return strategies;
 }

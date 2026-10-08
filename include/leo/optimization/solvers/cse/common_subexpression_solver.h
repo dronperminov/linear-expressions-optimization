@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <random>
 #include <vector>
 
@@ -30,7 +31,7 @@ public:
     void setScorer(std::shared_ptr<const CommonSubexpressionScorer> scorer);
     void setSelector(std::shared_ptr<const ScoreSelector> selector);
 
-    size_t solve() override;
+    std::optional<size_t> solve() override;
     Solution getSolution() const override;
 private:
     void initialize();

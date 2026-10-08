@@ -21,17 +21,32 @@
 
 using namespace leo;
 
-StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSystem, const std::string& preset, bool addTargetPairs) {
+StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSystem, const ArgParser& parser) {
+    if (expressionsSystem.isHorizontal()) {
+        std::cerr << "Warning: vector covering solver skipped (horizontal system is not supported)" << std::endl;
+        return StrategyPool();
+    }
+
+    leo::vector_covering::Parameters parameters;
+    parameters.maxAbsValue = expressionsSystem.getMaxAbsValue();
+    parameters.naiveFallback = false;
+    parameters.removeUnused = true;
+    parameters.addTargetPairs = parser.isSet("--vec-add-target-pairs");
+
+    std::string preset = parser["--vec-preset"];
+
     if (preset == "default")
-        return presets::vectorCoveringDefault(expressionsSystem, addTargetPairs);
+        return presets::vectorCoveringDefault(parameters);
 
     if (preset == "distance")
-        return presets::vectorCoveringDistance(expressionsSystem, addTargetPairs);
+        return presets::vectorCoveringDistance(parameters);
 
-    return presets::vectorCoveringAll(expressionsSystem, addTargetPairs);
+    return presets::vectorCoveringAll(parameters);
 }
 
-StrategyPool getCommonSubexpressionStrategies(const std::string& preset) {
+StrategyPool getCommonSubexpressionStrategies(const ArgParser& parser) {
+    std::string preset = parser["--cse-preset"];
+
     if (preset == "vanilla")
         return presets::cseVanilla();
 
@@ -48,7 +63,7 @@ TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& 
     TaskPool tasks;
 
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
-    StrategyPool vecStrategies = getVectorCoveringStrategies(expressionsSystem, parser["--vec-preset"], parser.isSet("--vec-add-target-pairs"));
+    StrategyPool vecStrategies = getVectorCoveringStrategies(expressionsSystem, parser);
 
     if (parser["--vec-sampling"] == "sample")
         tasks.add(vecStrategies.sample(vecIterations, generator));
@@ -56,7 +71,7 @@ TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& 
         tasks.add(vecStrategies.each(vecIterations, generator));
 
     size_t cseIterations = std::stoull(parser["--cse-iterations"]);
-    StrategyPool cseStrategies = getCommonSubexpressionStrategies(parser["--cse-preset"]);
+    StrategyPool cseStrategies = getCommonSubexpressionStrategies(parser);
 
     if (parser["--cse-sampling"] == "sample")
         tasks.add(cseStrategies.sample(cseIterations, generator));
@@ -221,10 +236,10 @@ int main(int argc, char** argv) {
     parser.add("--try-transpose", "-T", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
 
     parser.addSection("Vector covering solver");
-    parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
-    parser.addChoices("--vec-preset", ArgType::String, "Strategues preset", {"default", "distance", "all"}, "all");
+    parser.addChoices("--vec-preset", ArgType::String, "Strategues preset", {"default", "distance", "all"}, "distance");
     parser.add("--vec-iterations", ArgType::UInt, "Number of iterations", "10");
     parser.addChoices("--vec-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
+    parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
 
     parser.addSection("Common subexpression (CSE) solver");
     parser.addChoices("--cse-preset", ArgType::String, "Strategues preset", {"vanilla", "potential", "intersections", "all"}, "all");

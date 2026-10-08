@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 #include <leo/entities/solution.h>
@@ -20,7 +21,7 @@ public:
 
     void setBound(size_t bound);
 
-    virtual size_t solve() = 0;
+    virtual std::optional<size_t> solve() = 0;
     virtual Solution getSolution() const = 0;
 
     virtual ~Solver() = default;

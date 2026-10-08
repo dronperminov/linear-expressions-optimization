@@ -71,8 +71,11 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest) {
             if (boundByBest && shared[group] < groups[group].additions)
                 solver->setBound(shared[group]);
 
-            const size_t solverAdditions = solver->solve();
+            const std::optional<size_t> result = solver->solve();
+            if (!result)
+                continue;
 
+            size_t solverAdditions = *result;
             std::optional<ReducerResult>& local = localBest[group];
             if (solverAdditions < (local ? local->additions : groups[group].additions))
                 local = ReducerResult{solverAdditions, taskId, solver->getSolution()};

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
@@ -14,18 +15,17 @@
 #include <leo/optimization/selection/score_selector.h>
 #include <leo/optimization/solvers/solver.h>
 #include <leo/optimization/solvers/vector_covering/candidate.h>
-#include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
+#include <leo/optimization/solvers/vector_covering/parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 
 namespace leo::vector_covering {
 
 class VectorCoveringSolver : public Solver {
-    VectorCoveringParameters parameters;
+    Parameters parameters;
     std::shared_ptr<const VectorCoveringScorer> scorer;
     std::shared_ptr<const ScoreSelector> selector;
     std::mt19937 generator;
 
-    size_t naiveComplexity;
     std::unordered_set<Vector> targets;
 
     std::unordered_set<Vector> uncovered;
@@ -36,15 +36,16 @@ class VectorCoveringSolver : public Solver {
     std::vector<Candidate> candidates;
     std::unordered_set<Vector> unique;
 public:
-    VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed);
+    VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const Parameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed);
 
-    void setParameters(const VectorCoveringParameters& parameters);
+    void setParameters(const Parameters& parameters);
     void setScorer(std::shared_ptr<const VectorCoveringScorer> scorer);
     void setSelector(std::shared_ptr<const ScoreSelector> selector);
 
-    size_t solve() override;
+    std::optional<size_t> solve() override;
     Solution getSolution() const override;
 private:
+    void initializeTargets();
     void initialize();
 
     void initializeCandidates();
@@ -53,8 +54,13 @@ private:
     void useCandidate(const Candidate& candidate);
 
     void addTargetPairs();
-    void fallbackToNaive();
+
+    std::optional<size_t> build();
+    size_t buildNaive();
+
     void removeUnused();
+
+    bool isBounded() const;
 };
 
 } // namespace leo::vector_covering

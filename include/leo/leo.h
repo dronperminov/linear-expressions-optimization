@@ -43,9 +43,9 @@
 // vector covering solver
 #include <leo/optimization/solvers/vector_covering/candidate.h>
 #include <leo/optimization/solvers/vector_covering/context.h>
+#include <leo/optimization/solvers/vector_covering/parameters.h>
 #include <leo/optimization/solvers/vector_covering/scorers/default_scorer.h>
 #include <leo/optimization/solvers/vector_covering/scorers/distance_scorer.h>
-#include <leo/optimization/solvers/vector_covering/vector_covering_parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
 
