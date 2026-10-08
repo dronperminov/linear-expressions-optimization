@@ -16,4 +16,8 @@ void Solver::setBound(size_t bound) {
     this->bound = bound;
 }
 
+std::optional<size_t> Solver::solve(const Solution& solution, double probability) {
+    return std::nullopt;
+}
+
 } // namespace leo

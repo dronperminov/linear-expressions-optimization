@@ -43,6 +43,14 @@ std::optional<size_t> VectorCoveringSolver::solve() {
     return build();
 }
 
+std::optional<size_t> VectorCoveringSolver::solve(const Solution& solution, double probability) {
+    if (solution.dimension != dimension)
+        throw std::runtime_error("VectorCoveringSolver::solve(solution, probability): dimensions mistmatch (" + std::to_string(dimension) + " != " + std::to_string(solution.dimension) + ")");
+
+    initializePartial(solution.substitutions, probability);
+    return build();
+}
+
 Solution VectorCoveringSolver::getSolution() const {
     if (!solved)
         throw std::runtime_error("VectorCoveringSolver::getSolution: solution is not available yet, call solve() first");
@@ -97,6 +105,39 @@ void VectorCoveringSolver::initialize() {
         Vector basis(dimension, i);
         pool[basis.getCanonized()] = i;
         vectors.emplace_back(basis);
+    }
+}
+
+void VectorCoveringSolver::initializePartial(const std::vector<Substitution>& substitutions, double probability) {
+    std::vector<bool> used(substitutions.size(), true);
+    std::vector<size_t> indices(substitutions.size());
+    std::uniform_real_distribution<double> uniform(0.0, 1.0);
+    size_t offset = 0;
+
+    initialize();
+
+    for (size_t index = 0; index < substitutions.size(); index++) {
+        Substitution s = substitutions[index];
+
+        if (!used[index])
+            continue;
+
+        if (uniform(generator) > probability || (s.i >= dimension && !used[s.i - dimension]) || (s.j >= dimension && !used[s.j - dimension])) {
+            used[index] = false;
+            continue;
+        }
+
+        indices[index] = offset++;
+
+        if (s.i >= dimension)
+            s.i = dimension + indices[s.i - dimension];
+
+        if (s.j >= dimension)
+            s.j = dimension + indices[s.j - dimension];
+
+        Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
+        Vector canonized = vector.getCanonized();
+        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
     }
 }
 

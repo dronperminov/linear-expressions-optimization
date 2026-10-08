@@ -22,6 +22,7 @@ public:
     void setBound(size_t bound);
 
     virtual std::optional<size_t> solve() = 0;
+    virtual std::optional<size_t> solve(const Solution& solution, double probability);
     virtual Solution getSolution() const = 0;
 
     virtual ~Solver() = default;

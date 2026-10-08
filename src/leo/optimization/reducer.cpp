@@ -1,6 +1,8 @@
 #include <leo/optimization/reducer.h>
 
+#include <algorithm>
 #include <atomic>
+#include <iterator>
 #include <optional>
 #include <stdexcept>
 
@@ -35,7 +37,7 @@ size_t Reducer::addGroup(const ExpressionsSystem& expressionsSystem) {
     return groups.size() - 1;
 }
 
-bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest) {
+bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool startFromSolutions) {
     if (pools.size() != groups.size())
         throw std::invalid_argument("Reducer::reduce: expected " + std::to_string(groups.size()) + " task pools (one per group), got " + std::to_string(pools.size()));
 
@@ -51,11 +53,18 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest) {
     for (size_t group = 0; group < groups.size(); group++)
         shared[group] = groups[group].additions;
 
+    std::vector<std::vector<double>> weights(groups.size());
+    if (startFromSolutions)
+        for (size_t group = 0; group < groups.size(); group++)
+            weights[group] = getWeights(groups[group].solutions);
+
     std::vector<std::optional<ReducerResult>> best(groups.size(), std::nullopt);
+    std::vector<std::vector<Solution>> collected(groups.size());
 
     #pragma omp parallel num_threads(threads)
     {
         std::vector<std::optional<ReducerResult>> localBest(groups.size(), std::nullopt);
+        std::vector<std::vector<Solution>> localSolutions(groups.size());
 
         #pragma omp for schedule(dynamic)
         for (size_t jobId = 0; jobId < jobs.size(); jobId++) {
@@ -71,14 +80,33 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest) {
             if (boundByBest && shared[group] < groups[group].additions)
                 solver->setBound(shared[group]);
 
-            const std::optional<size_t> result = solver->solve();
+            std::optional<size_t> result;
+
+            if (weights[group].empty()) {
+                result = solver->solve();
+            }
+            else {
+                std::mt19937 generator(task.seed);
+                std::discrete_distribution<size_t> distribution(weights[group].begin(), weights[group].end());
+                result = solver->solve(groups[group].solutions[distribution(generator)], 0.5);
+            }
+
             if (!result)
                 continue;
 
             size_t solverAdditions = *result;
             std::optional<ReducerResult>& local = localBest[group];
-            if (solverAdditions < (local ? local->additions : groups[group].additions))
-                local = ReducerResult{solverAdditions, taskId, solver->getSolution()};
+            bool isBetter = solverAdditions < (local ? local->additions : groups[group].additions);
+
+            if (isBetter || startFromSolutions) {
+                Solution solution = solver->getSolution();
+
+                if (startFromSolutions)
+                    localSolutions[group].push_back(solution);
+
+                if (isBetter)
+                    local = ReducerResult{solverAdditions, taskId, std::move(solution)};
+            }
 
             size_t current = shared[group].load();
             while (solverAdditions < current && !shared[group].compare_exchange_weak(current, solverAdditions))
@@ -92,6 +120,9 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest) {
 
                 if (local && (!best[group] || std::tie(local->additions, local->taskId) < std::tie(best[group]->additions, best[group]->taskId)))
                     best[group] = std::move(local);
+
+                std::vector<Solution>& solutions = localSolutions[group];
+                collected[group].insert(collected[group].end(), std::make_move_iterator(solutions.begin()), std::make_move_iterator(solutions.end()));
             }
         }
     }
@@ -99,13 +130,20 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest) {
     bool improved = false;
 
     for (size_t group = 0; group < groups.size(); group++) {
-        if (!best[group])
+        if (best[group]) {
+            groups[group].additions = best[group]->additions;
+            groups[group].solution = std::move(best[group]->solution);
+            groups[group].strategyName = pools[group][best[group]->taskId].strategy->name;
+            improved = true;
+        }
+
+        if (collected[group].empty())
             continue;
 
-        groups[group].additions = best[group]->additions;
-        groups[group].solution = std::move(best[group]->solution);
-        groups[group].strategyName = pools[group][best[group]->taskId].strategy->name;
-        improved = true;
+        groups[group].solutions = std::move(collected[group]);
+
+        if (!best[group])
+            groups[group].solutions.push_back(groups[group].solution);
     }
 
     return improved;
@@ -131,8 +169,28 @@ const Solution& Reducer::getSolution(size_t group) const {
     return groups.at(group).solution;
 }
 
+const std::vector<Solution>& Reducer::getSolutions(size_t group) const {
+    return groups.at(group).solutions;
+}
+
 const std::string& Reducer::getStrategyName(size_t group) const {
     return groups.at(group).strategyName;
+}
+
+std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, double temperature) const {
+    std::vector<size_t> additions;
+    for (const Solution& solution : solutions)
+        additions.push_back(solution.getAdditions());
+
+    std::vector<double> weights;
+    if (additions.empty())
+        return weights;
+
+    size_t best = *std::min_element(additions.begin(), additions.end());
+    for (size_t value : additions)
+        weights.push_back(std::exp(-double(value - best) / temperature));
+
+    return weights;
 }
 
 } // namespace leo

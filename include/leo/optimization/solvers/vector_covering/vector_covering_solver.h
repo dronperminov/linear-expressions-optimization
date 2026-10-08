@@ -43,10 +43,12 @@ public:
     void setSelector(std::shared_ptr<const ScoreSelector> selector);
 
     std::optional<size_t> solve() override;
+    std::optional<size_t> solve(const Solution& solution, double probability) override;
     Solution getSolution() const override;
 private:
     void initializeTargets();
     void initialize();
+    void initializePartial(const std::vector<Substitution>& substitutions, double probability);
 
     void initializeCandidates();
     void updateCandidates();

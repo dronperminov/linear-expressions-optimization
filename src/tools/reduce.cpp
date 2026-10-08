@@ -22,10 +22,8 @@
 using namespace leo;
 
 StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSystem, const ArgParser& parser) {
-    if (expressionsSystem.isHorizontal()) {
-        std::cerr << "Warning: vector covering solver skipped (horizontal system is not supported)" << std::endl;
+    if (expressionsSystem.isHorizontal())
         return StrategyPool();
-    }
 
     leo::vector_covering::Parameters parameters;
     parameters.maxAbsValue = expressionsSystem.getMaxAbsValue();
@@ -59,7 +57,7 @@ StrategyPool getCommonSubexpressionStrategies(const ArgParser& parser) {
     return presets::cseAll();
 }
 
-TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
+TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator, size_t round) {
     TaskPool tasks;
 
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
@@ -70,13 +68,15 @@ TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& 
     else
         tasks.add(vecStrategies.each(vecIterations, generator));
 
-    size_t cseIterations = std::stoull(parser["--cse-iterations"]);
-    StrategyPool cseStrategies = getCommonSubexpressionStrategies(parser);
+    if (round == 0 || !parser.isSet("--cse-first-round-only")) {
+        size_t cseIterations = std::stoull(parser["--cse-iterations"]);
+        StrategyPool cseStrategies = getCommonSubexpressionStrategies(parser);
 
-    if (parser["--cse-sampling"] == "sample")
-        tasks.add(cseStrategies.sample(cseIterations, generator));
-    else
-        tasks.add(cseStrategies.each(cseIterations, generator));
+        if (parser["--cse-sampling"] == "sample")
+            tasks.add(cseStrategies.sample(cseIterations, generator));
+        else
+            tasks.add(cseStrategies.each(cseIterations, generator));
+    }
 
     return tasks;
 }
@@ -85,44 +85,71 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
     size_t threads = std::stoull(parser["--threads"]);
 
     Reducer reducer(threads);
-    std::vector<TaskPool> pools;
-
     reducer.addGroup(expressionsSystem);
-    pools.push_back(initTasks(expressionsSystem, parser, generator));
 
     std::optional<ExpressionsSystem> transposedSystem;
     if (parser.isSet("--try-transpose")) {
         transposedSystem.emplace(expressionsSystem.getTransposedExpressions());
         reducer.addGroup(*transposedSystem);
-        pools.push_back(initTasks(*transposedSystem, parser, generator));
     }
 
-    reducer.reduce(pools, parser.isSet("--bound-by-best"));
-
-    Solution solution = reducer.getSolution(0);
+    size_t lowerBound = expressionsSystem.getAdditionsLowerBound();
+    size_t rounds = std::stoull(parser["--rounds"]);
+    Solution bestSolution = reducer.getSolution(0);
+    size_t bestAdditions = bestSolution.getAdditions();
     std::string strategyName = reducer.getStrategyName(0);
 
-    if (transposedSystem) {
-        SolutionTransposer transposer;
-        Solution transposed = transposer.transpose(reducer.getSolution(1));
+    for (size_t round = 0; round < rounds && bestAdditions > lowerBound; round++) {
+        std::vector<TaskPool> pools;
+        pools.push_back(initTasks(expressionsSystem, parser, generator, round));
+        bool haveTasks = !pools[0].empty();
 
-        if (transposed.getAdditions() < solution.getAdditions()) {
-            solution = transposed;
-            strategyName = reducer.getStrategyName(1) + " (transposed)";
+        if (transposedSystem) {
+            pools.push_back(initTasks(*transposedSystem, parser, generator, round));
+            haveTasks = haveTasks || !pools[1].empty();
         }
+
+        if (!haveTasks)
+            break;
+
+        reducer.reduce(pools, parser.isSet("--bound-by-best"), rounds > 1);
+
+        Solution solution = reducer.getSolution(0);
+        size_t additions = solution.getAdditions();
+
+        if (additions < bestAdditions) {
+            bestSolution = solution;
+            bestAdditions = additions;
+            strategyName = reducer.getStrategyName(0);
+        }
+
+        if (transposedSystem) {
+            SolutionTransposer transposer;
+            Solution transposed = transposer.transpose(reducer.getSolution(1));
+            additions = transposed.getAdditions();
+
+            if (additions < bestAdditions) {
+                bestSolution = transposed;
+                bestAdditions = additions;
+                strategyName = reducer.getStrategyName(1) + " (transposed)";
+            }
+        }
+
+        if (parser.isSet("--print-rounds-stats"))
+            std::cout << "Round " << (round + 1) << ": " << bestAdditions << " additions (" << strategyName << ")" << std::endl;
     }
 
     if (!parser.isSet("--quiet")) {
         std::cout << "Solution:" << std::endl;
-        std::cout << "- solution has " << solution.getAdditions() << " additions" << std::endl;
+        std::cout << "- solution has " << bestAdditions << " additions" << std::endl;
 
-        if (solution.getAdditions() <= expressionsSystem.getAdditionsLowerBound())
+        if (bestAdditions <= lowerBound)
             std::cout << "- solution is optimal" << std::endl;
 
         std::cout << "- best strategy: " << strategyName << std::endl;
     }
 
-    return solution;
+    return bestSolution;
 }
 
 Solution inlineSubstitutions(const Solution& solution, const ArgParser& parser) {
@@ -232,17 +259,19 @@ int main(int argc, char** argv) {
     parser.addChoices("--format", "-f", ArgType::String, "Output format for the solution", {"slp", "txt", "json", "auto"}, "auto");
 
     parser.addSection("Solving strategy");
+    parser.add("--rounds", "-r", ArgType::Natural, "Number of rounds; each next round tries to improve solutions of the previous one", "1");
     parser.add("--bound-by-best", "-b", ArgType::Flag, "Use the best solution found so far as an upper bound for subsequent solvers");
     parser.add("--try-transpose", "-T", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
+    parser.add("--cse-first-round-only", ArgType::Flag, "Run CSE solvers only in the first round, later rounds use only vector covering solvers");
 
     parser.addSection("Vector covering solver");
-    parser.addChoices("--vec-preset", ArgType::String, "Strategues preset", {"default", "distance", "all"}, "distance");
+    parser.addChoices("--vec-preset", ArgType::String, "Strategies preset", {"default", "distance", "all"}, "distance");
     parser.add("--vec-iterations", ArgType::UInt, "Number of iterations", "10");
     parser.addChoices("--vec-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
     parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
 
     parser.addSection("Common subexpression (CSE) solver");
-    parser.addChoices("--cse-preset", ArgType::String, "Strategues preset", {"vanilla", "potential", "intersections", "all"}, "all");
+    parser.addChoices("--cse-preset", ArgType::String, "Strategies preset", {"vanilla", "potential", "intersections", "all"}, "all");
     parser.add("--cse-iterations", ArgType::UInt, "Number of iterations", "100");
     parser.addChoices("--cse-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
 
@@ -254,6 +283,7 @@ int main(int argc, char** argv) {
     parser.addSection("Diagnostics");
     parser.add("--print-args", ArgType::Flag, "Print parsed command-line arguments to stdout");
     parser.add("--print-system-stats", ArgType::Flag, "Print statistics of the parsed system of expressions");
+    parser.add("--print-rounds-stats", ArgType::Flag, "Print the best result after each round");
 
     if (!parser.parse(argc, argv))
         return 0;
@@ -264,12 +294,16 @@ int main(int argc, char** argv) {
     }
 
     bool quiet = parser.isSet("--quiet");
-    size_t threads = std::stoi(parser["--threads"]);
-    uint32_t seed = parser.isSet("--seed") && std::stoul(parser["--seed"]) != 0 ? std::stoul(parser["--seed"]) : time(0);
+    size_t threads = std::stoull(parser["--threads"]);
+    uint32_t seed = std::stoul(parser["--seed"]);
+    if (seed == 0)
+        seed = time(0);
 
     std::string inputPath = parser["--input-path"];
     std::string outputPath = parser["--output-path"];
     std::string format = parser["--format"];
+
+    size_t rounds = std::stoull(parser["--rounds"]);
 
     size_t cseIterations = std::stoull(parser["--cse-iterations"]);
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
@@ -285,6 +319,8 @@ int main(int argc, char** argv) {
         std::cout << "- output format: " << format << std::endl;
         std::cout << std::endl;
         std::cout << "Solving strategy:" << std::endl;
+        std::cout << "- rounds: " << rounds << std::endl;
+        std::cout << "- use CSE only on first round: " << (parser.isSet("--cse-first-round-only") ? "yes" : "no") << std::endl;
         std::cout << "- try transposing: " << (parser.isSet("--try-transpose") ? "yes" : "no") << std::endl;
         std::cout << "- bound by best: " << (parser.isSet("--bound-by-best") ? "yes" : "no") << std::endl;
         std::cout << std::endl;
@@ -313,7 +349,7 @@ int main(int argc, char** argv) {
         }
 
         std::cout << std::endl;
-        std::cout << "Postprocessing:" << std::endl;
+        std::cout << "Post-processing:" << std::endl;
         std::cout << "- inline substitutions: " << (parser.isSet("--inline-substitutions") ? "yes" : "no") << std::endl;
         std::cout << "- optimize inversions: " << (std::stoul(parser["--optimize-signs-iterations"]) > 0 ? "yes (" + parser["--optimize-signs-iterations"] + " iterations)" : "no") << std::endl;
         std::cout << "- validate solution: " << (parser.isSet("--validate") ? "yes" : "no") << std::endl;
