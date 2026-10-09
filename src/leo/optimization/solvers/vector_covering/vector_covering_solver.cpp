@@ -34,6 +34,10 @@ void VectorCoveringSolver::setSelector(std::shared_ptr<const ScoreSelector> sele
     this->selector = std::move(selector);
 }
 
+bool VectorCoveringSolver::canStartFromSolution() const {
+    return true;
+}
+
 std::optional<size_t> VectorCoveringSolver::solve() {
     initialize();
 

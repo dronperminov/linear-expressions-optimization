@@ -16,6 +16,10 @@ void Solver::setBound(size_t bound) {
     this->bound = bound;
 }
 
+bool Solver::canStartFromSolution() const {
+    return false;
+}
+
 std::optional<size_t> Solver::solve(const Solution& solution, double probability) {
     return std::nullopt;
 }

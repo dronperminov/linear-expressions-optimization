@@ -84,7 +84,7 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool 
 
             std::optional<size_t> result;
 
-            if (weights[group].empty()) {
+            if (weights[group].empty() || !solver->canStartFromSolution()) {
                 result = solver->solve();
             }
             else {
