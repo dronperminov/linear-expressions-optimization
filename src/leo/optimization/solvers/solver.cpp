@@ -16,4 +16,12 @@ void Solver::setBound(size_t bound) {
     this->bound = bound;
 }
 
+bool Solver::canStartFromSubstitutions() const {
+    return false;
+}
+
+std::optional<size_t> Solver::solve(const std::vector<Substitution>& substitutions) {
+    return std::nullopt;
+}
+
 } // namespace leo

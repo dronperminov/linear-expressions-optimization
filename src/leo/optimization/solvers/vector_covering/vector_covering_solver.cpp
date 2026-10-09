@@ -4,26 +4,19 @@
 
 namespace leo::vector_covering {
 
-VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const VectorCoveringParameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
+VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const Parameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
     setParameters(parameters);
     setScorer(scorer);
     setSelector(selector);
 
-    for (const std::vector<int>& expression : expressions) {
-        Vector target(expression);
-        if (target.getSupport() < 2)
-            continue;
+    initializeTargets();
 
-        target.canonize();
-        targets.insert(target);
-    }
-
-    naiveComplexity = 0;
+    bound = 0;
     for (const Vector& target : targets)
-        naiveComplexity += target.getSupport() - 1;
+        bound += target.getSupport() - 1;
 }
 
-void VectorCoveringSolver::setParameters(const VectorCoveringParameters& parameters) {
+void VectorCoveringSolver::setParameters(const Parameters& parameters) {
     this->parameters = parameters;
 }
 
@@ -41,37 +34,32 @@ void VectorCoveringSolver::setSelector(std::shared_ptr<const ScoreSelector> sele
     this->selector = std::move(selector);
 }
 
-size_t VectorCoveringSolver::solve() {
+bool VectorCoveringSolver::canStartFromSubstitutions() const {
+    return true;
+}
+
+std::optional<size_t> VectorCoveringSolver::solve() {
     initialize();
 
     if (parameters.addTargetPairs)
         addTargetPairs();
 
-    initializeCandidates();
+    return build();
+}
 
-    while (!uncovered.empty() && steps.size() <= bound && (!parameters.naiveFallback || steps.size() <= naiveComplexity)) {
-        scorer->score(candidates, {uncovered, vectors}, scores);
-        size_t index = selector->selectIndex(scores, generator);
-        useCandidate(candidates[index]);
+std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution>& substitutions) {
+    initialize();
 
-        if (!uncovered.empty()) {
-            updateCandidates();
-            candidates[index] = candidates.back();
-            candidates.pop_back();
-        }
+    for (const Substitution& s : substitutions) {
+        if (s.i >= vectors.size() || s.j >= vectors.size())
+            throw std::invalid_argument("VectorCoveringSolver::solve: substitution references a step index out of range");
+
+        Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
+        Vector canonized = vector.getCanonized();
+        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
     }
 
-    if (!uncovered.empty()) {
-        fallbackToNaive();
-    }
-    else if (parameters.removeUnused) {
-        removeUnused();
-    }
-
-    candidates.clear();
-    unique.clear();
-    solved = true;
-    return steps.size();
+    return build();
 }
 
 Solution VectorCoveringSolver::getSolution() const {
@@ -102,6 +90,17 @@ Solution VectorCoveringSolver::getSolution() const {
     }
 
     return solution;
+}
+
+void VectorCoveringSolver::initializeTargets() {
+    for (const std::vector<int>& expression : expressions) {
+        Vector target(expression);
+        if (target.getSupport() < 2)
+            continue;
+
+        target.canonize();
+        targets.insert(target);
+    }
 }
 
 void VectorCoveringSolver::initialize() {
@@ -180,7 +179,39 @@ void VectorCoveringSolver::addTargetPairs() {
     }
 }
 
-void VectorCoveringSolver::fallbackToNaive() {
+std::optional<size_t> VectorCoveringSolver::build() {
+    initializeCandidates();
+
+    while (!uncovered.empty() && !isBounded()) {
+        scorer->score(candidates, {uncovered, vectors}, scores);
+        size_t index = selector->selectIndex(scores, generator);
+        useCandidate(candidates[index]);
+
+        if (!uncovered.empty()) {
+            updateCandidates();
+            candidates[index] = candidates.back();
+            candidates.pop_back();
+        }
+    }
+
+    candidates.clear();
+    unique.clear();
+
+    if (!uncovered.empty()) {
+        if (parameters.naiveFallback)
+            return buildNaive();
+
+        return std::nullopt;
+    }
+
+    if (parameters.removeUnused)
+        removeUnused();
+
+    solved = true;
+    return steps.size();
+}
+
+size_t VectorCoveringSolver::buildNaive() {
     initialize();
 
     while (!uncovered.empty()) {
@@ -209,6 +240,9 @@ void VectorCoveringSolver::fallbackToNaive() {
             ai = 1;
         }
     }
+
+    solved = true;
+    return steps.size();
 }
 
 void VectorCoveringSolver::removeUnused() {
@@ -253,6 +287,10 @@ void VectorCoveringSolver::removeUnused() {
 
     for (size_t i = 0; i < vectors.size(); i++)
         pool[vectors[i].getCanonized()] = i;
+}
+
+bool VectorCoveringSolver::isBounded() const {
+    return steps.size() + uncovered.size() > bound;
 }
 
 } // namespace leo::vector_covering

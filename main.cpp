@@ -1,5 +1,6 @@
-#include <iostream>
 #include <ctime>
+#include <iostream>
+#include <optional>
 #include <random>
 
 #include <leo/leo.h>
@@ -53,7 +54,13 @@ void printSolution(const Solution& solution) {
 }
 
 void solve(const ExpressionsSystem& expressionsSystem, Solver& solver, const std::string& label, bool showSolution) {
-    int additions = solver.solve();
+    std::optional<size_t> result = solver.solve();
+    if (!result) {
+        std::cout << "Unable to solve" << std::endl;
+        return;
+    }
+
+    size_t additions = *result;
     std::cout << "Additions (" << label << "): " << additions << std::endl;
 
     Solution solution = solver.getSolution();
@@ -91,7 +98,7 @@ void test(const ExpressionsSystem& expressionsSystem, uint32_t seed) {
     expressionsSystem.describe(std::cout);
     std::cout << std::endl;
 
-    vector_covering::VectorCoveringParameters parameters = {maxAbsValue, true, true};
+    vector_covering::Parameters parameters = {maxAbsValue};
 
     auto defaultScorer = std::make_shared<vector_covering::DefaultScorer>();
     auto customScorer = std::make_shared<vector_covering::DefaultScorer>(1000, 100, 5, 3, 0, 0);

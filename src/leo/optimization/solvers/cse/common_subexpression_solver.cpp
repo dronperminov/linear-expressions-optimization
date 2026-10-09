@@ -23,7 +23,7 @@ void CommonSubexpressionSolver::setSelector(std::shared_ptr<const ScoreSelector>
     this->selector = std::move(selector);
 }
 
-size_t CommonSubexpressionSolver::solve() {
+std::optional<size_t> CommonSubexpressionSolver::solve() {
     initialize();
 
     while (1) {

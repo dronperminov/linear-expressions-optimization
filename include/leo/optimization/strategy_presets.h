@@ -1,13 +1,13 @@
 #pragma once
 
-#include <leo/entities/expressions_system.h>
 #include <leo/optimization/strategy_pool.h>
+#include <leo/optimization/solvers/vector_covering/parameters.h>
 
 namespace leo::presets {
 
-StrategyPool vectorCoveringDefault(const ExpressionsSystem& expressionsSystem, bool addTargetPairs);
-StrategyPool vectorCoveringDistance(const ExpressionsSystem& expressionsSystem, bool addTargetPairs);
-StrategyPool vectorCoveringAll(const ExpressionsSystem& expressionsSystem, bool addTargetPairs);
+StrategyPool vectorCoveringDefault(const leo::vector_covering::Parameters& parameters);
+StrategyPool vectorCoveringDistance(const leo::vector_covering::Parameters& parameters);
+StrategyPool vectorCoveringAll(const leo::vector_covering::Parameters& parameters);
 
 StrategyPool cseVanilla();
 StrategyPool csePotential();
