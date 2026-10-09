@@ -100,6 +100,7 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
     std::string strategyName = reducer.getStrategyName(0);
 
     for (size_t round = 0; round < rounds && bestAdditions > lowerBound; round++) {
+        auto t1 = std::chrono::steady_clock::now();
         std::vector<TaskPool> pools;
         pools.push_back(initTasks(expressionsSystem, parser, generator, round));
         bool haveTasks = !pools[0].empty();
@@ -135,8 +136,10 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
             }
         }
 
-        if (parser.isSet("--print-rounds-stats"))
-            std::cout << "Round " << (round + 1) << ": " << bestAdditions << " additions (" << strategyName << ")" << std::endl;
+        auto t2 = std::chrono::steady_clock::now();
+
+        if (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all"))
+            std::cout << "Round " << (round + 1) << ": " << bestAdditions << " additions (" << strategyName << "), elapsed: " << formatDuration(t2 - t1) << std::endl;
     }
 
     if (!parser.isSet("--quiet")) {
@@ -284,6 +287,7 @@ int main(int argc, char** argv) {
     parser.add("--print-args", ArgType::Flag, "Print parsed command-line arguments to stdout");
     parser.add("--print-system-stats", ArgType::Flag, "Print statistics of the parsed system of expressions");
     parser.add("--print-rounds-stats", ArgType::Flag, "Print the best result after each round");
+    parser.add("--print-all", "-p", ArgType::Flag, "Print all diagnostics (equivalent to --print-args --print-system-stats --print-rounds-stats)");
 
     if (!parser.parse(argc, argv))
         return 0;
@@ -308,7 +312,7 @@ int main(int argc, char** argv) {
     size_t cseIterations = std::stoull(parser["--cse-iterations"]);
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
 
-    if (parser.isSet("--print-args")) {
+    if (parser.isSet("--print-args") || parser.isSet("--print-all")) {
         std::cout << "Parsed parameters:" << std::endl;
         std::cout << "- threads: " << threads << std::endl;
         std::cout << "- random seed: " << seed << std::endl;
@@ -364,7 +368,7 @@ int main(int argc, char** argv) {
 
         ExpressionsSystem expressionsSystem = reader->read(inputPath);
 
-        if (parser.isSet("--print-system-stats")) {
+        if (parser.isSet("--print-system-stats") || parser.isSet("--print-all")) {
             std::cout << "Read system of expressions:" << std::endl;
             expressionsSystem.describe(std::cout);
             std::cout << std::endl;

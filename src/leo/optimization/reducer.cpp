@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <iterator>
 #include <optional>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace leo {
 
@@ -177,7 +179,7 @@ const std::string& Reducer::getStrategyName(size_t group) const {
     return groups.at(group).strategyName;
 }
 
-std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, double temperature) const {
+std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, double temperature, double eps) const {
     std::vector<size_t> additions;
     for (const Solution& solution : solutions)
         additions.push_back(solution.getAdditions());
@@ -186,9 +188,22 @@ std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, 
     if (additions.empty())
         return weights;
 
-    size_t best = *std::min_element(additions.begin(), additions.end());
+    std::unordered_map<size_t, size_t> counts;
     for (size_t value : additions)
-        weights.push_back(std::exp(-double(value - best) / temperature));
+        counts[value]++;
+
+    size_t best = *std::min_element(additions.begin(), additions.end());
+
+    double sum = 0;
+    for (size_t value : additions) {
+        double weight = std::exp(-double(value - best) / temperature) / counts[value];
+        weights.push_back(weight);
+        sum += weight;
+    }
+
+    double uniform = 1.0 / additions.size();
+    for (double& weight : weights)
+        weight = weight / sum * (1 - eps) + uniform * eps;
 
     return weights;
 }

@@ -38,7 +38,7 @@ public:
     const std::vector<Solution>& getSolutions(size_t group) const;
     const std::string& getStrategyName(size_t group) const;
 
-    std::vector<double> getWeights(const std::vector<Solution>& solutions, double temperature = 1.0) const;
+    std::vector<double> getWeights(const std::vector<Solution>& solutions, double temperature = 2.0, double eps = 0.1) const;
 };
 
 } // namespace leo
