@@ -34,7 +34,7 @@ void VectorCoveringSolver::setSelector(std::shared_ptr<const ScoreSelector> sele
     this->selector = std::move(selector);
 }
 
-bool VectorCoveringSolver::canStartFromSolution() const {
+bool VectorCoveringSolver::canStartFromSubstitutions() const {
     return true;
 }
 
@@ -47,11 +47,18 @@ std::optional<size_t> VectorCoveringSolver::solve() {
     return build();
 }
 
-std::optional<size_t> VectorCoveringSolver::solve(const Solution& solution, double probability) {
-    if (solution.dimension != dimension)
-        throw std::runtime_error("VectorCoveringSolver::solve(solution, probability): dimensions mistmatch (" + std::to_string(dimension) + " != " + std::to_string(solution.dimension) + ")");
+std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution>& substitutions) {
+    initialize();
 
-    initializePartial(solution.substitutions, probability);
+    for (const Substitution& s : substitutions) {
+        if (s.i >= vectors.size() || s.j >= vectors.size())
+            throw std::invalid_argument("VectorCoveringSolver::solve: substitution references a step index out of range");
+
+        Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
+        Vector canonized = vector.getCanonized();
+        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
+    }
+
     return build();
 }
 
@@ -109,39 +116,6 @@ void VectorCoveringSolver::initialize() {
         Vector basis(dimension, i);
         pool[basis.getCanonized()] = i;
         vectors.emplace_back(basis);
-    }
-}
-
-void VectorCoveringSolver::initializePartial(const std::vector<Substitution>& substitutions, double probability) {
-    std::vector<bool> used(substitutions.size(), true);
-    std::vector<size_t> indices(substitutions.size());
-    std::uniform_real_distribution<double> uniform(0.0, 1.0);
-    size_t offset = 0;
-
-    initialize();
-
-    for (size_t index = 0; index < substitutions.size(); index++) {
-        Substitution s = substitutions[index];
-
-        if (!used[index])
-            continue;
-
-        if (uniform(generator) > probability || (s.i >= dimension && !used[s.i - dimension]) || (s.j >= dimension && !used[s.j - dimension])) {
-            used[index] = false;
-            continue;
-        }
-
-        indices[index] = offset++;
-
-        if (s.i >= dimension)
-            s.i = dimension + indices[s.i - dimension];
-
-        if (s.j >= dimension)
-            s.j = dimension + indices[s.j - dimension];
-
-        Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
-        Vector canonized = vector.getCanonized();
-        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
     }
 }
 

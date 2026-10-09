@@ -16,11 +16,11 @@ void Solver::setBound(size_t bound) {
     this->bound = bound;
 }
 
-bool Solver::canStartFromSolution() const {
+bool Solver::canStartFromSubstitutions() const {
     return false;
 }
 
-std::optional<size_t> Solver::solve(const Solution& solution, double probability) {
+std::optional<size_t> Solver::solve(const std::vector<Substitution>& substitutions) {
     return std::nullopt;
 }
 

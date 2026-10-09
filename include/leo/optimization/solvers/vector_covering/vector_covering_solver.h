@@ -42,10 +42,10 @@ public:
     void setScorer(std::shared_ptr<const VectorCoveringScorer> scorer);
     void setSelector(std::shared_ptr<const ScoreSelector> selector);
 
-    bool canStartFromSolution() const override;
+    bool canStartFromSubstitutions() const override;
 
     std::optional<size_t> solve() override;
-    std::optional<size_t> solve(const Solution& solution, double probability) override;
+    std::optional<size_t> solve(const std::vector<Substitution>& substitutions) override;
     Solution getSolution() const override;
 private:
     void initializeTargets();

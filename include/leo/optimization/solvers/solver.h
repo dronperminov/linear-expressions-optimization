@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <leo/entities/solution.h>
+#include <leo/entities/substitution.h>
 
 namespace leo {
 
@@ -21,10 +22,10 @@ public:
 
     void setBound(size_t bound);
 
-    virtual bool canStartFromSolution() const;
+    virtual bool canStartFromSubstitutions() const;
 
     virtual std::optional<size_t> solve() = 0;
-    virtual std::optional<size_t> solve(const Solution& solution, double probability);
+    virtual std::optional<size_t> solve(const std::vector<Substitution>& substitutions);
     virtual Solution getSolution() const = 0;
 
     virtual ~Solver() = default;

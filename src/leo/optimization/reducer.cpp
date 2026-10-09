@@ -84,13 +84,13 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool 
 
             std::optional<size_t> result;
 
-            if (weights[group].empty() || !solver->canStartFromSolution()) {
+            if (weights[group].empty() || !solver->canStartFromSubstitutions()) {
                 result = solver->solve();
             }
             else {
                 std::mt19937 generator(task.seed);
-                std::discrete_distribution<size_t> distribution(weights[group].begin(), weights[group].end());
-                result = solver->solve(groups[group].solutions[distribution(generator)], 0.5);
+                std::vector<Substitution> substitutions = getRandomSubstitutions(groups[group].solutions, weights[group], generator, 0.5);
+                result = solver->solve(substitutions);
             }
 
             if (!result)
@@ -206,6 +206,44 @@ std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, 
         weight = weight / sum * (1 - eps) + uniform * eps;
 
     return weights;
+}
+
+std::vector<Substitution> Reducer::getRandomSubstitutions(const std::vector<Solution>& solutions, const std::vector<double>& weights, std::mt19937& generator, double probability) const {
+    std::discrete_distribution<size_t> distribution(weights.begin(), weights.end());
+    const Solution& solution = solutions[distribution(generator)];
+
+    std::uniform_real_distribution<double> uniform(0.0, 1.0);
+
+    std::vector<bool> used(solution.substitutions.size(), true);
+    std::vector<size_t> indices(solution.substitutions.size());
+    std::vector<Substitution> substitutions;
+
+    size_t dimension = solution.dimension;
+    size_t offset = 0;
+
+    for (size_t index = 0; index < solution.substitutions.size(); index++) {
+        Substitution s = solution.substitutions[index];
+
+        if (!used[index])
+            continue;
+
+        if (uniform(generator) > probability || (s.i >= dimension && !used[s.i - dimension]) || (s.j >= dimension && !used[s.j - dimension])) {
+            used[index] = false;
+            continue;
+        }
+
+        indices[index] = offset++;
+
+        if (s.i >= dimension)
+            s.i = dimension + indices[s.i - dimension];
+
+        if (s.j >= dimension)
+            s.j = dimension + indices[s.j - dimension];
+
+        substitutions.push_back(s);
+    }
+
+    return substitutions;
 }
 
 } // namespace leo

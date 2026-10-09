@@ -99,6 +99,9 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
     size_t bestAdditions = bestSolution.getAdditions();
     std::string strategyName = reducer.getStrategyName(0);
 
+    if (rounds > 1 && (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all")))
+        std::cout << "Optimization rounds" << std::endl;
+
     for (size_t round = 0; round < rounds && bestAdditions > lowerBound; round++) {
         auto t1 = std::chrono::steady_clock::now();
         std::vector<TaskPool> pools;
@@ -117,6 +120,7 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
 
         Solution solution = reducer.getSolution(0);
         size_t additions = solution.getAdditions();
+        size_t solutionsCount = reducer.getSolutions(0).size();
 
         if (additions < bestAdditions) {
             bestSolution = solution;
@@ -128,6 +132,7 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
             SolutionTransposer transposer;
             Solution transposed = transposer.transpose(reducer.getSolution(1));
             additions = transposed.getAdditions();
+            solutionsCount += reducer.getSolutions(1).size();
 
             if (additions < bestAdditions) {
                 bestSolution = transposed;
@@ -138,8 +143,12 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
 
         auto t2 = std::chrono::steady_clock::now();
 
-        if (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all"))
-            std::cout << "Round " << (round + 1) << ": " << bestAdditions << " additions (" << strategyName << "), elapsed: " << formatDuration(t2 - t1) << std::endl;
+        if (rounds > 1 && (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all"))) {
+            std::cout << "- round " << (round + 1) << ": " << bestAdditions << " additions (" << strategyName << ")";
+            std::cout << ", solutions: " << solutionsCount;
+            std::cout << ", elapsed: " << formatDuration(t2 - t1);
+            std::cout << std::endl;
+        }
     }
 
     if (!parser.isSet("--quiet")) {
@@ -286,7 +295,7 @@ int main(int argc, char** argv) {
     parser.addSection("Diagnostics");
     parser.add("--print-args", ArgType::Flag, "Print parsed command-line arguments to stdout");
     parser.add("--print-system-stats", ArgType::Flag, "Print statistics of the parsed system of expressions");
-    parser.add("--print-rounds-stats", ArgType::Flag, "Print the best result after each round");
+    parser.add("--print-rounds-stats", ArgType::Flag, "Print the best result after each round (only if rounds > 1)");
     parser.add("--print-all", "-p", ArgType::Flag, "Print all diagnostics (equivalent to --print-args --print-system-stats --print-rounds-stats)");
 
     if (!parser.parse(argc, argv))

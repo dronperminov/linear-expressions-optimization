@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cstddef>
+#include <random>
 #include <string>
 #include <vector>
 
 #include <leo/entities/expressions_system.h>
 #include <leo/entities/solution.h>
+#include <leo/entities/substitution.h>
 #include <leo/optimization/strategy_pool.h>
 
 namespace leo {
@@ -38,7 +40,8 @@ public:
     const std::vector<Solution>& getSolutions(size_t group) const;
     const std::string& getStrategyName(size_t group) const;
 
-    std::vector<double> getWeights(const std::vector<Solution>& solutions, double temperature = 2.0, double eps = 0.1) const;
+    std::vector<double> getWeights(const std::vector<Solution>& solutions, double temperature = 1.0, double eps = 0.01) const;
+    std::vector<Substitution> getRandomSubstitutions(const std::vector<Solution>& solutions, const std::vector<double>& weights, std::mt19937& generator, double probability) const;
 };
 
 } // namespace leo
