@@ -30,6 +30,7 @@ StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSys
     parameters.naiveFallback = false;
     parameters.removeUnused = true;
     parameters.addTargetPairs = parser.isSet("--vec-add-target-pairs");
+    parameters.maxTimeInSeconds = std::stod(parser["--vec-max-time"]);
 
     std::string preset = parser["--vec-preset"];
 
@@ -43,18 +44,21 @@ StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSys
 }
 
 StrategyPool getCommonSubexpressionStrategies(const ArgParser& parser) {
+    leo::cse::Parameters parameters;
+    parameters.maxTimeInSeconds = std::stod(parser["--cse-max-time"]);
+
     std::string preset = parser["--cse-preset"];
 
     if (preset == "vanilla")
-        return presets::cseVanilla();
+        return presets::cseVanilla(parameters);
 
     if (preset == "potential")
-        return presets::csePotential();
+        return presets::csePotential(parameters);
 
     if (preset == "intersections")
-        return presets::cseIntersections();
+        return presets::cseIntersections(parameters);
 
-    return presets::cseAll();
+    return presets::cseAll(parameters);
 }
 
 TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator, size_t round) {
@@ -281,11 +285,13 @@ int main(int argc, char** argv) {
     parser.add("--vec-iterations", ArgType::UInt, "Number of iterations", "10");
     parser.addChoices("--vec-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
     parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
+    parser.add("--vec-max-time", ArgType::Real, "Max computation time of the solver in seconds; 0 means unlimited", "0");
 
     parser.addSection("Common subexpression (CSE) solver");
     parser.addChoices("--cse-preset", ArgType::String, "Strategies preset", {"vanilla", "potential", "intersections", "all"}, "all");
     parser.add("--cse-iterations", ArgType::UInt, "Number of iterations", "100");
     parser.addChoices("--cse-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
+    parser.add("--cse-max-time", ArgType::Real, "Max computation time of the solver in seconds; 0 means unlimited", "0");
 
     parser.addSection("Post-processing");
     parser.add("--inline-substitutions", ArgType::Flag, "Inline substitutions that occur only once");
@@ -318,8 +324,11 @@ int main(int argc, char** argv) {
 
     size_t rounds = std::stoull(parser["--rounds"]);
 
-    size_t cseIterations = std::stoull(parser["--cse-iterations"]);
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
+    size_t cseIterations = std::stoull(parser["--cse-iterations"]);
+
+    double vecMaxTime = std::stod(parser["--vec-max-time"]);
+    double cseMaxTime = std::stod(parser["--cse-max-time"]);
 
     if (parser.isSet("--print-args") || parser.isSet("--print-all")) {
         std::cout << "Parsed parameters:" << std::endl;
@@ -344,6 +353,7 @@ int main(int argc, char** argv) {
             std::cout << "  - preset: " << parser["--vec-preset"] << std::endl;
             std::cout << "  - iterations: " << vecIterations << std::endl;
             std::cout << "  - sampling strategy: " << parser["--vec-sampling"] << std::endl;
+            std::cout << "  - max time: " << (vecMaxTime > 0 ? std::to_string(vecMaxTime) + " seconds" : "unlimited") << std::endl;
         }
         else {
             std::cout << " not used" << std::endl;
@@ -351,11 +361,12 @@ int main(int argc, char** argv) {
 
         std::cout << std::endl;
         std::cout << "- Common subexpression (CSE) solver:";
-        if (cseIterations) {
+        if (cseIterations > 0) {
             std::cout << std::endl;
             std::cout << "  - preset: " << parser["--cse-preset"] << std::endl;
             std::cout << "  - iterations: " << cseIterations << std::endl;
             std::cout << "  - sampling strategy: " << parser["--cse-sampling"] << std::endl;
+            std::cout << "  - max time: " << (cseMaxTime > 0 ? std::to_string(cseMaxTime) + " seconds" : "unlimited") << std::endl;
         }
         else {
             std::cout << " not used" << std::endl;

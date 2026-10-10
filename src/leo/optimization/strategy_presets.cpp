@@ -12,7 +12,6 @@
 #include <leo/optimization/solvers/cse/scorers/default_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/intersections_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>
-#include <leo/optimization/solvers/vector_covering/parameters.h>
 #include <leo/optimization/solvers/vector_covering/scorers/default_scorer.h>
 #include <leo/optimization/solvers/vector_covering/scorers/distance_scorer.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
@@ -92,20 +91,20 @@ StrategyPool vectorCoveringAll(const leo::vector_covering::Parameters& parameter
     return strategies;
 }
 
-StrategyPool cseVanilla() {
+StrategyPool cseVanilla(const leo::cse::Parameters& parameters) {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
     auto scorer = std::make_shared<cse::DefaultScorer>();
 
     strategies.add("cse/vanilla", [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, seed);
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, parameters, scorer, selector, seed);
     });
 
     return strategies;
 }
 
-StrategyPool csePotential() {
+StrategyPool csePotential(const leo::cse::Parameters& parameters) {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
@@ -114,13 +113,13 @@ StrategyPool csePotential() {
         std::mt19937 generator(seed);
         double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
         auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
-        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, parameters, scorer, selector, generator());
     });
 
     return strategies;
 }
 
-StrategyPool cseIntersections() {
+StrategyPool cseIntersections(const leo::cse::Parameters& parameters) {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
@@ -130,27 +129,27 @@ StrategyPool cseIntersections() {
         double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
         double beta = std::uniform_real_distribution<double>(0.5, 1.0)(generator);
         auto scorer = std::make_shared<cse::IntersectionsScorer>(alpha, beta);
-        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, parameters, scorer, selector, generator());
     });
 
     return strategies;
 }
 
-StrategyPool cseAll() {
+StrategyPool cseAll(const leo::cse::Parameters& parameters) {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
     strategies.add("cse/vanilla", 3, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
         auto scorer = std::make_shared<cse::DefaultScorer>();
-        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, seed);
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, parameters, scorer, selector, seed);
     });
 
     strategies.add("cse/potential", 1, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
         std::mt19937 generator(seed);
         double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
         auto scorer = std::make_shared<cse::PotentialScorer>(alpha);
-        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, parameters, scorer, selector, generator());
     });
 
     strategies.add("cse/intersections", 1, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
@@ -158,7 +157,7 @@ StrategyPool cseAll() {
         double alpha = std::uniform_real_distribution<double>(0.0, 0.6)(generator);
         double beta = std::uniform_real_distribution<double>(0.5, 1.0)(generator);
         auto scorer = std::make_shared<cse::IntersectionsScorer>(alpha, beta);
-        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, scorer, selector, generator());
+        return std::make_unique<cse::CommonSubexpressionSolver>(expressions, parameters, scorer, selector, generator());
     });
 
     return strategies;

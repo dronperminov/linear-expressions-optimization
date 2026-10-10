@@ -35,6 +35,7 @@
 #include <leo/optimization/solvers/cse/common_subexpression_scorer.h>
 #include <leo/optimization/solvers/cse/common_subexpression_solver.h>
 #include <leo/optimization/solvers/cse/context.h>
+#include <leo/optimization/solvers/cse/parameters.h>
 #include <leo/optimization/solvers/cse/scorers/default_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/intersections_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>

@@ -39,6 +39,7 @@ bool VectorCoveringSolver::canStartFromSubstitutions() const {
 }
 
 std::optional<size_t> VectorCoveringSolver::solve() {
+    initializeDeadline();
     initialize();
 
     if (parameters.addTargetPairs)
@@ -48,6 +49,7 @@ std::optional<size_t> VectorCoveringSolver::solve() {
 }
 
 std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution>& substitutions) {
+    initializeDeadline();
     initialize();
 
     for (const Substitution& s : substitutions) {
@@ -117,6 +119,17 @@ void VectorCoveringSolver::initialize() {
         pool[basis.getCanonized()] = i;
         vectors.emplace_back(basis);
     }
+
+    solved = false;
+}
+
+void VectorCoveringSolver::initializeDeadline() {
+    if (parameters.maxTimeInSeconds == 0.0) {
+        deadline = std::chrono::steady_clock::time_point::max();
+        return;
+    }
+
+    deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(parameters.maxTimeInSeconds));
 }
 
 void VectorCoveringSolver::initializeCandidates() {
@@ -182,7 +195,7 @@ void VectorCoveringSolver::addTargetPairs() {
 std::optional<size_t> VectorCoveringSolver::build() {
     initializeCandidates();
 
-    while (!uncovered.empty() && !isBounded()) {
+    while (!uncovered.empty() && !isBounded() && !isTimeout()) {
         scorer->score(candidates, {uncovered, vectors}, scores);
         size_t index = selector->selectIndex(scores, generator);
         useCandidate(candidates[index]);
@@ -291,6 +304,10 @@ void VectorCoveringSolver::removeUnused() {
 
 bool VectorCoveringSolver::isBounded() const {
     return steps.size() + uncovered.size() > bound;
+}
+
+bool VectorCoveringSolver::isTimeout() const {
+    return std::chrono::steady_clock::now() > deadline;
 }
 
 } // namespace leo::vector_covering
