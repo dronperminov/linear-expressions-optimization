@@ -58,6 +58,10 @@ std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution
 
         Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
         Vector canonized = vector.getCanonized();
+
+        if (pool.find(canonized) != pool.end())
+            throw std::invalid_argument("VectorCoveringSolver::solve: substitution produces existing vector");
+
         useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
     }
 
@@ -110,6 +114,9 @@ void VectorCoveringSolver::initialize() {
     pool.clear();
     vectors.clear();
     steps.clear();
+
+    used.clear();
+    usedCount = 0;
 
     for (const Vector& target : targets)
         uncovered.insert(target);
@@ -168,10 +175,15 @@ void VectorCoveringSolver::addCandidate(size_t i, size_t j, int sign) {
 }
 
 void VectorCoveringSolver::useCandidate(const Candidate& candidate) {
-    pool[candidate.canonized] = pool.size();
+    size_t index = vectors.size();
+
+    pool[candidate.canonized] = index;
     vectors.push_back(candidate.vector);
     steps.push_back(candidate.step);
-    uncovered.erase(candidate.canonized);
+    used.push_back(false);
+
+    if (uncovered.erase(candidate.canonized) > 0)
+        markUsed(index - dimension);
 }
 
 void VectorCoveringSolver::addTargetPairs() {
@@ -193,7 +205,8 @@ void VectorCoveringSolver::addTargetPairs() {
 }
 
 std::optional<size_t> VectorCoveringSolver::build() {
-    initializeCandidates();
+    if (!uncovered.empty())
+        initializeCandidates();
 
     while (!uncovered.empty() && !isBounded() && !isTimeout()) {
         scorer->score(candidates, {uncovered, vectors}, scores);
@@ -258,51 +271,67 @@ size_t VectorCoveringSolver::buildNaive() {
     return steps.size();
 }
 
-void VectorCoveringSolver::removeUnused() {
-    std::vector<bool> used(vectors.size(), false);
+void VectorCoveringSolver::markUsed(size_t index) {
+    std::vector<size_t> stack = {index};
 
-    for (size_t i = 0; i < steps.size(); i++) {
-        size_t index = steps.size() - 1 - i;
+    while (!stack.empty()) {
+        size_t current = stack.back();
+        stack.pop_back();
 
-        if (targets.find(vectors[dimension + index].getCanonized()) != targets.end())
-            used[dimension + index] = true;
-
-        if (used[dimension + index]) {
-            used[steps[index].i] = true;
-            used[steps[index].j] = true;
-        }
-    }
-
-    std::vector<size_t> indices(vectors.size());
-    for (size_t i = 0; i < indices.size(); i++)
-        indices[i] = i;
-
-    size_t j = 0;
-    for (size_t i = 0; i < steps.size(); i++) {
-        if (!used[dimension + i])
+        if (used[current])
             continue;
 
-        indices[dimension + i] = dimension + j;
+        used[current] = true;
+        usedCount++;
+
+        const Substitution& step = steps[current];
+
+        if (step.i >= dimension)
+            stack.push_back(step.i - dimension);
+
+        if (step.j >= dimension)
+            stack.push_back(step.j - dimension);
+    }
+}
+
+void VectorCoveringSolver::removeUnused() {
+    if (usedCount == steps.size())
+        return;
+
+    std::vector<size_t> indices(vectors.size());
+    for (size_t i = 0; i < dimension; i++)
+        indices[i] = i;
+
+    usedCount = 0;
+    for (size_t i = 0; i < steps.size(); i++) {
+        if (!used[i])
+            continue;
+
+        indices[dimension + i] = dimension + usedCount;
         steps[i].i = indices[steps[i].i];
         steps[i].j = indices[steps[i].j];
 
-        if (i != j) {
-            steps[j] = steps[i];
-            vectors[dimension + j] = vectors[dimension + i];
+        if (i != usedCount) {
+            steps[usedCount] = steps[i];
+            vectors[dimension + usedCount] = vectors[dimension + i];
         }
 
-        j++;
+        usedCount++;
     }
 
-    steps.erase(steps.begin() + j, steps.end());
-    vectors.erase(vectors.begin() + dimension + j, vectors.end());
-    pool.clear();
+    steps.erase(steps.begin() + usedCount, steps.end());
+    used.assign(usedCount, true);
+    vectors.erase(vectors.begin() + dimension + usedCount, vectors.end());
 
+    pool.clear();
     for (size_t i = 0; i < vectors.size(); i++)
         pool[vectors[i].getCanonized()] = i;
 }
 
 bool VectorCoveringSolver::isBounded() const {
+    if (parameters.removeUnused)
+        return usedCount + uncovered.size() > bound;
+
     return steps.size() + uncovered.size() > bound;
 }
 

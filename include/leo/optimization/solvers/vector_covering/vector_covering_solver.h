@@ -34,6 +34,9 @@ class VectorCoveringSolver : public Solver {
     std::unordered_map<Vector, size_t> pool;
     std::vector<Vector> vectors;
     std::vector<Substitution> steps;
+    std::vector<bool> used;
+    size_t usedCount;
+
     std::vector<double> scores;
     std::vector<Candidate> candidates;
     std::unordered_set<Vector> unique;
@@ -65,6 +68,7 @@ private:
     std::optional<size_t> build();
     size_t buildNaive();
 
+    void markUsed(size_t index);
     void removeUnused();
 
     bool isBounded() const;
