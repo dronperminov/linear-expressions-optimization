@@ -3,6 +3,7 @@
 // entities
 #include <leo/entities/expressions_system.h>
 #include <leo/entities/hash_set.h>
+#include <leo/entities/helper_pool.h>
 #include <leo/entities/solution.h>
 #include <leo/entities/substitution.h>
 #include <leo/entities/term.h>

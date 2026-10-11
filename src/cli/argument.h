@@ -5,7 +5,7 @@
 #include <vector>
 
 enum class ArgType {
-    String, Path, Natural, UInt, Real, Flag
+    String, Path, Natural, UInt, Real, Ratio, Flag
 };
 
 struct Argument {
@@ -32,5 +32,6 @@ struct Argument {
 private:
     bool isNatural(const std::string& value) const;
     bool isReal(const std::string& value) const;
+    bool isRatio(const std::string& value) const;
     bool isValidChoice(const std::string& value) const;
 };

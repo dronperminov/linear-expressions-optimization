@@ -65,6 +65,9 @@ std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution
         useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
     }
 
+    if (parameters.addTargetPairs)
+        addTargetPairs();
+
     return build();
 }
 
