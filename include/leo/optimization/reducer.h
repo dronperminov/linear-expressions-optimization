@@ -50,7 +50,6 @@ public:
     const std::string& getStrategyName(size_t group) const;
 
     std::vector<double> getWeights(const std::vector<Solution>& solutions, size_t best, double temperature = 1.0, double eps = 0.01) const;
-    std::vector<Substitution> getRandomSubstitutions(const std::vector<Solution>& solutions, const std::vector<double>& weights, std::mt19937& generator, double probability) const;
 };
 
 } // namespace leo
