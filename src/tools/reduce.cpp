@@ -30,6 +30,7 @@ StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSys
     parameters.naiveFallback = false;
     parameters.removeUnused = true;
     parameters.addTargetPairs = parser.isSet("--vec-add-target-pairs");
+    parameters.maxTimeInSeconds = std::stod(parser["--vec-max-time"]);
 
     std::string preset = parser["--vec-preset"];
 
@@ -43,18 +44,21 @@ StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSys
 }
 
 StrategyPool getCommonSubexpressionStrategies(const ArgParser& parser) {
+    leo::cse::Parameters parameters;
+    parameters.maxTimeInSeconds = std::stod(parser["--cse-max-time"]);
+
     std::string preset = parser["--cse-preset"];
 
     if (preset == "vanilla")
-        return presets::cseVanilla();
+        return presets::cseVanilla(parameters);
 
     if (preset == "potential")
-        return presets::csePotential();
+        return presets::csePotential(parameters);
 
     if (preset == "intersections")
-        return presets::cseIntersections();
+        return presets::cseIntersections(parameters);
 
-    return presets::cseAll();
+    return presets::cseAll(parameters);
 }
 
 TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator, size_t round) {
@@ -81,6 +85,19 @@ TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& 
     return tasks;
 }
 
+ReduceParameters getReduceParameters(const ArgParser& parser) {
+    ReduceParameters parameters;
+    parameters.boundByBest = parser.isSet("--bound-by-best");
+    parameters.startFromSubstitutions = std::stoull(parser["--rounds"]) > 1;
+    parameters.minStartRatio = std::stod(parser["--min-start-ratio"]);
+    parameters.maxStartRatio = std::stod(parser["--max-start-ratio"]);
+
+    if (parameters.minStartRatio > parameters.maxStartRatio)
+        std::swap(parameters.minStartRatio, parameters.maxStartRatio);
+
+    return parameters;
+}
+
 Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& parser, std::mt19937& generator) {
     size_t threads = std::stoull(parser["--threads"]);
 
@@ -95,11 +112,14 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
 
     size_t lowerBound = expressionsSystem.getAdditionsLowerBound();
     size_t rounds = std::stoull(parser["--rounds"]);
+    bool needPrint = rounds > 1 && (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all"));
+    ReduceParameters parameters = getReduceParameters(parser);
+
     Solution bestSolution = reducer.getSolution(0);
     size_t bestAdditions = bestSolution.getAdditions();
     std::string strategyName = reducer.getStrategyName(0);
 
-    if (rounds > 1 && (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all")))
+    if (bestAdditions > lowerBound && needPrint)
         std::cout << "Optimization rounds" << std::endl;
 
     for (size_t round = 0; round < rounds && bestAdditions > lowerBound; round++) {
@@ -116,11 +136,10 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
         if (!haveTasks)
             break;
 
-        reducer.reduce(pools, parser.isSet("--bound-by-best"), rounds > 1);
+        reducer.reduce(pools, parameters);
 
         Solution solution = reducer.getSolution(0);
         size_t additions = solution.getAdditions();
-        size_t solutionsCount = reducer.getSolutions(0).size();
 
         if (additions < bestAdditions) {
             bestSolution = solution;
@@ -132,7 +151,6 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
             SolutionTransposer transposer;
             Solution transposed = transposer.transpose(reducer.getSolution(1));
             additions = transposed.getAdditions();
-            solutionsCount += reducer.getSolutions(1).size();
 
             if (additions < bestAdditions) {
                 bestSolution = transposed;
@@ -143,9 +161,8 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
 
         auto t2 = std::chrono::steady_clock::now();
 
-        if (rounds > 1 && (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all"))) {
+        if (needPrint) {
             std::cout << "- round " << (round + 1) << ": " << bestAdditions << " additions (" << strategyName << ")";
-            std::cout << ", solutions: " << solutionsCount;
             std::cout << ", elapsed: " << formatDuration(t2 - t1);
             std::cout << std::endl;
         }
@@ -275,17 +292,21 @@ int main(int argc, char** argv) {
     parser.add("--bound-by-best", "-b", ArgType::Flag, "Use the best solution found so far as an upper bound for subsequent solvers");
     parser.add("--try-transpose", "-T", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
     parser.add("--cse-first-round-only", ArgType::Flag, "Run CSE solvers only in the first round, later rounds use only vector covering solvers");
+    parser.add("--min-start-ratio", ArgType::Ratio, "Minimum starting substitutions as a share of the best current additions (rounds after the first)", "0.1");
+    parser.add("--max-start-ratio", ArgType::Ratio, "Maximum starting substitutions as a share of the best current additions (rounds after the first)", "0.5");
 
     parser.addSection("Vector covering solver");
     parser.addChoices("--vec-preset", ArgType::String, "Strategies preset", {"default", "distance", "all"}, "distance");
     parser.add("--vec-iterations", ArgType::UInt, "Number of iterations", "10");
     parser.addChoices("--vec-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
     parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
+    parser.add("--vec-max-time", ArgType::Real, "Max computation time of the solver in seconds; 0 means unlimited", "0");
 
     parser.addSection("Common subexpression (CSE) solver");
     parser.addChoices("--cse-preset", ArgType::String, "Strategies preset", {"vanilla", "potential", "intersections", "all"}, "all");
     parser.add("--cse-iterations", ArgType::UInt, "Number of iterations", "100");
     parser.addChoices("--cse-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
+    parser.add("--cse-max-time", ArgType::Real, "Max computation time of the solver in seconds; 0 means unlimited", "0");
 
     parser.addSection("Post-processing");
     parser.add("--inline-substitutions", ArgType::Flag, "Inline substitutions that occur only once");
@@ -317,9 +338,17 @@ int main(int argc, char** argv) {
     std::string format = parser["--format"];
 
     size_t rounds = std::stoull(parser["--rounds"]);
+    double minStartRatio = std::stod(parser["--min-start-ratio"]);
+    double maxStartRatio = std::stod(parser["--max-start-ratio"]);
 
-    size_t cseIterations = std::stoull(parser["--cse-iterations"]);
+    if (minStartRatio > maxStartRatio)
+        std::swap(minStartRatio, maxStartRatio);
+
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
+    size_t cseIterations = std::stoull(parser["--cse-iterations"]);
+
+    double vecMaxTime = std::stod(parser["--vec-max-time"]);
+    double cseMaxTime = std::stod(parser["--cse-max-time"]);
 
     if (parser.isSet("--print-args") || parser.isSet("--print-all")) {
         std::cout << "Parsed parameters:" << std::endl;
@@ -336,6 +365,7 @@ int main(int argc, char** argv) {
         std::cout << "- use CSE only on first round: " << (parser.isSet("--cse-first-round-only") ? "yes" : "no") << std::endl;
         std::cout << "- try transposing: " << (parser.isSet("--try-transpose") ? "yes" : "no") << std::endl;
         std::cout << "- bound by best: " << (parser.isSet("--bound-by-best") ? "yes" : "no") << std::endl;
+        std::cout << "- start ratios: " << minStartRatio << " .. " << maxStartRatio << std::endl;
         std::cout << std::endl;
         std::cout << "- Vector covering solver:";
         if (vecIterations > 0) {
@@ -344,6 +374,7 @@ int main(int argc, char** argv) {
             std::cout << "  - preset: " << parser["--vec-preset"] << std::endl;
             std::cout << "  - iterations: " << vecIterations << std::endl;
             std::cout << "  - sampling strategy: " << parser["--vec-sampling"] << std::endl;
+            std::cout << "  - max time: " << (vecMaxTime > 0 ? std::to_string(vecMaxTime) + " seconds" : "unlimited") << std::endl;
         }
         else {
             std::cout << " not used" << std::endl;
@@ -351,11 +382,12 @@ int main(int argc, char** argv) {
 
         std::cout << std::endl;
         std::cout << "- Common subexpression (CSE) solver:";
-        if (cseIterations) {
+        if (cseIterations > 0) {
             std::cout << std::endl;
             std::cout << "  - preset: " << parser["--cse-preset"] << std::endl;
             std::cout << "  - iterations: " << cseIterations << std::endl;
             std::cout << "  - sampling strategy: " << parser["--cse-sampling"] << std::endl;
+            std::cout << "  - max time: " << (cseMaxTime > 0 ? std::to_string(cseMaxTime) + " seconds" : "unlimited") << std::endl;
         }
         else {
             std::cout << " not used" << std::endl;

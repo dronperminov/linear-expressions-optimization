@@ -4,9 +4,14 @@
 
 namespace leo::cse {
 
-CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, std::shared_ptr<const CommonSubexpressionScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
+CommonSubexpressionSolver::CommonSubexpressionSolver(const std::vector<std::vector<int>>& expressions, const Parameters& parameters, std::shared_ptr<const CommonSubexpressionScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
+    setParameters(parameters);
     setScorer(scorer);
     setSelector(selector);
+}
+
+void CommonSubexpressionSolver::setParameters(const Parameters& parameters) {
+    this->parameters = parameters;
 }
 
 void CommonSubexpressionSolver::setScorer(std::shared_ptr<const CommonSubexpressionScorer> scorer) {
@@ -24,9 +29,10 @@ void CommonSubexpressionSolver::setSelector(std::shared_ptr<const ScoreSelector>
 }
 
 std::optional<size_t> CommonSubexpressionSolver::solve() {
+    initializeDeadline();
     initialize();
 
-    while (1) {
+    while (!isTimeout()) {
         std::vector<Subexpression> subexpressions = getSubexpressions();
         if (subexpressions.empty())
             break;
@@ -61,6 +67,16 @@ void CommonSubexpressionSolver::initialize() {
     matrix = expressions;
     substitutions.clear();
     variables = dimension;
+    solved = false;
+}
+
+void CommonSubexpressionSolver::initializeDeadline() {
+    if (parameters.maxTimeInSeconds == 0.0) {
+        deadline = std::chrono::steady_clock::time_point::max();
+        return;
+    }
+
+    deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(parameters.maxTimeInSeconds));
 }
 
 std::vector<Subexpression> CommonSubexpressionSolver::getSubexpressions() const {
@@ -123,6 +139,10 @@ size_t CommonSubexpressionSolver::getAdditions() const {
     }
 
     return additions;
+}
+
+bool CommonSubexpressionSolver::isTimeout() const {
+    return std::chrono::steady_clock::now() > deadline;
 }
 
 } // namespace leo::cse

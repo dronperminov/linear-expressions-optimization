@@ -23,23 +23,26 @@ struct Job {
 };
 } // namespace
 
+Reducer::Group::Group(const ExpressionsSystem& expressionsSystem) :
+                      expressionsSystem(&expressionsSystem),
+                      lowerBound(expressionsSystem.getAdditionsLowerBound()),
+                      solution(expressionsSystem.getNaiveSolution()),
+                      additions(expressionsSystem.getNaiveAdditions()),
+                      strategyName("naive"),
+                      pool(expressionsSystem.getVariablesCount()) {
+
+}
+
 Reducer::Reducer(size_t threads) : threads(threads ? threads : 1) {
 
 }
 
 size_t Reducer::addGroup(const ExpressionsSystem& expressionsSystem) {
-    Group group;
-    group.expressionsSystem = &expressionsSystem;
-    group.lowerBound = expressionsSystem.getAdditionsLowerBound();
-    group.solution = expressionsSystem.getNaiveSolution();
-    group.additions = group.solution.getAdditions();
-    group.strategyName = "naive";
-
-    groups.push_back(std::move(group));
+    groups.emplace_back(expressionsSystem);
     return groups.size() - 1;
 }
 
-bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool startFromSolutions) {
+bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters& parameters) {
     if (pools.size() != groups.size())
         throw std::invalid_argument("Reducer::reduce: expected " + std::to_string(groups.size()) + " task pools (one per group), got " + std::to_string(pools.size()));
 
@@ -54,11 +57,6 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool 
     std::vector<std::atomic<size_t>> shared(groups.size());
     for (size_t group = 0; group < groups.size(); group++)
         shared[group] = groups[group].additions;
-
-    std::vector<std::vector<double>> weights(groups.size());
-    if (startFromSolutions)
-        for (size_t group = 0; group < groups.size(); group++)
-            weights[group] = getWeights(groups[group].solutions);
 
     std::vector<std::optional<ReducerResult>> best(groups.size(), std::nullopt);
     std::vector<std::vector<Solution>> collected(groups.size());
@@ -79,17 +77,21 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool 
             const Task& task = pools[group][taskId];
             std::unique_ptr<Solver> solver = task.strategy->create(groups[group].expressionsSystem->getExpressions(), task.seed);
 
-            if (boundByBest && shared[group] < groups[group].additions)
+            if (parameters.boundByBest && shared[group] < groups[group].additions)
                 solver->setBound(shared[group]);
 
             std::optional<size_t> result;
 
-            if (weights[group].empty() || !solver->canStartFromSubstitutions()) {
+            if (!parameters.startFromSubstitutions || !solver->canStartFromSubstitutions() || groups[group].pool.empty()) {
                 result = solver->solve();
             }
             else {
                 std::mt19937 generator(task.seed);
-                std::vector<Substitution> substitutions = getRandomSubstitutions(groups[group].solutions, weights[group], generator, 0.5);
+
+                size_t minAdditions = groups[group].additions * parameters.minStartRatio;
+                size_t maxAdditions = groups[group].additions * parameters.maxStartRatio;
+                std::uniform_int_distribution<size_t> distribution(minAdditions, maxAdditions);
+                std::vector<Substitution> substitutions = groups[group].pool.getRandomSubstitutions(generator, distribution(generator));
                 result = solver->solve(substitutions);
             }
 
@@ -100,10 +102,10 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool 
             std::optional<ReducerResult>& local = localBest[group];
             bool isBetter = solverAdditions < (local ? local->additions : groups[group].additions);
 
-            if (isBetter || startFromSolutions) {
+            if (isBetter || parameters.startFromSubstitutions) {
                 Solution solution = solver->getSolution();
 
-                if (startFromSolutions)
+                if (parameters.startFromSubstitutions)
                     localSolutions[group].push_back(solution);
 
                 if (isBetter)
@@ -142,10 +144,9 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, bool boundByBest, bool 
         if (collected[group].empty())
             continue;
 
-        groups[group].solutions = std::move(collected[group]);
-
-        if (!best[group])
-            groups[group].solutions.push_back(groups[group].solution);
+        std::vector<double> weights = getWeights(collected[group], groups[group].additions);
+        for (size_t i = 0; i < collected[group].size(); i++)
+            groups[group].pool.addSolution(collected[group][i], weights[i]);
     }
 
     return improved;
@@ -171,15 +172,11 @@ const Solution& Reducer::getSolution(size_t group) const {
     return groups.at(group).solution;
 }
 
-const std::vector<Solution>& Reducer::getSolutions(size_t group) const {
-    return groups.at(group).solutions;
-}
-
 const std::string& Reducer::getStrategyName(size_t group) const {
     return groups.at(group).strategyName;
 }
 
-std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, double temperature, double eps) const {
+std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, size_t best, double temperature, double eps) const {
     std::vector<size_t> additions;
     for (const Solution& solution : solutions)
         additions.push_back(solution.getAdditions());
@@ -191,8 +188,6 @@ std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, 
     std::unordered_map<size_t, size_t> counts;
     for (size_t value : additions)
         counts[value]++;
-
-    size_t best = *std::min_element(additions.begin(), additions.end());
 
     double sum = 0;
     for (size_t value : additions) {
@@ -206,44 +201,6 @@ std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, 
         weight = weight / sum * (1 - eps) + uniform * eps;
 
     return weights;
-}
-
-std::vector<Substitution> Reducer::getRandomSubstitutions(const std::vector<Solution>& solutions, const std::vector<double>& weights, std::mt19937& generator, double probability) const {
-    std::discrete_distribution<size_t> distribution(weights.begin(), weights.end());
-    const Solution& solution = solutions[distribution(generator)];
-
-    std::uniform_real_distribution<double> uniform(0.0, 1.0);
-
-    std::vector<bool> used(solution.substitutions.size(), true);
-    std::vector<size_t> indices(solution.substitutions.size());
-    std::vector<Substitution> substitutions;
-
-    size_t dimension = solution.dimension;
-    size_t offset = 0;
-
-    for (size_t index = 0; index < solution.substitutions.size(); index++) {
-        Substitution s = solution.substitutions[index];
-
-        if (!used[index])
-            continue;
-
-        if (uniform(generator) > probability || (s.i >= dimension && !used[s.i - dimension]) || (s.j >= dimension && !used[s.j - dimension])) {
-            used[index] = false;
-            continue;
-        }
-
-        indices[index] = offset++;
-
-        if (s.i >= dimension)
-            s.i = dimension + indices[s.i - dimension];
-
-        if (s.j >= dimension)
-            s.j = dimension + indices[s.j - dimension];
-
-        substitutions.push_back(s);
-    }
-
-    return substitutions;
 }
 
 } // namespace leo

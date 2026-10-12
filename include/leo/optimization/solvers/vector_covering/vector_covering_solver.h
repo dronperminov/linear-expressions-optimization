@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -25,6 +26,7 @@ class VectorCoveringSolver : public Solver {
     std::shared_ptr<const VectorCoveringScorer> scorer;
     std::shared_ptr<const ScoreSelector> selector;
     std::mt19937 generator;
+    std::chrono::steady_clock::time_point deadline;
 
     std::unordered_set<Vector> targets;
 
@@ -32,6 +34,9 @@ class VectorCoveringSolver : public Solver {
     std::unordered_map<Vector, size_t> pool;
     std::vector<Vector> vectors;
     std::vector<Substitution> steps;
+    std::vector<bool> used;
+    size_t usedCount;
+
     std::vector<double> scores;
     std::vector<Candidate> candidates;
     std::unordered_set<Vector> unique;
@@ -50,6 +55,7 @@ public:
 private:
     void initializeTargets();
     void initialize();
+    void initializeDeadline();
     void initializePartial(const std::vector<Substitution>& substitutions, double probability);
 
     void initializeCandidates();
@@ -62,9 +68,11 @@ private:
     std::optional<size_t> build();
     size_t buildNaive();
 
+    void markUsed(size_t index);
     void removeUnused();
 
     bool isBounded() const;
+    bool isTimeout() const;
 };
 
 } // namespace leo::vector_covering

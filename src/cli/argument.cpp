@@ -68,6 +68,9 @@ std::string Argument::getTypeHint() const {
     if (type == ArgType::Real)
         return "<real>";
 
+    if (type == ArgType::Ratio)
+        return "<ratio>";
+
     if (type == ArgType::String)
         return "<str>";
 
@@ -118,6 +121,11 @@ bool Argument::validate(const std::string& parsedName) const {
         return false;
     }
 
+    if (type == ArgType::Ratio && !isRatio(value)) {
+        std::cerr << "Invalid value for argument \"" << parsedName << "\": " << value << " is not ratio" << std::endl;
+        return false;
+    }
+
     return true;
 }
 
@@ -148,6 +156,14 @@ bool Argument::isReal(const std::string& value) const {
     }
 
     return true;
+}
+
+bool Argument::isRatio(const std::string& value) const {
+    if (!isReal(value))
+        return false;
+
+    double ratio = std::stod(value);
+    return ratio >= 0.0 && ratio <= 1.0;
 }
 
 bool Argument::isValidChoice(const std::string& value) const {

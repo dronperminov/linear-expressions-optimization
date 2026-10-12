@@ -3,6 +3,7 @@
 // entities
 #include <leo/entities/expressions_system.h>
 #include <leo/entities/hash_set.h>
+#include <leo/entities/helper_pool.h>
 #include <leo/entities/solution.h>
 #include <leo/entities/substitution.h>
 #include <leo/entities/term.h>
@@ -35,6 +36,7 @@
 #include <leo/optimization/solvers/cse/common_subexpression_scorer.h>
 #include <leo/optimization/solvers/cse/common_subexpression_solver.h>
 #include <leo/optimization/solvers/cse/context.h>
+#include <leo/optimization/solvers/cse/parameters.h>
 #include <leo/optimization/solvers/cse/scorers/default_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/intersections_scorer.h>
 #include <leo/optimization/solvers/cse/scorers/potential_scorer.h>

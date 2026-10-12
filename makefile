@@ -3,7 +3,9 @@ FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp -Iinclude
 
 LEO_ENTITIES := src/leo/entities/expressions_system.o \
              src/leo/entities/hash_set.o \
+             src/leo/entities/helper_pool.o \
              src/leo/entities/solution.o \
+             src/leo/entities/substitution.o \
              src/leo/entities/vector.o \
              src/leo/entities/vector_index.o
 
