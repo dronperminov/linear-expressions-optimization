@@ -1,63 +1,84 @@
-CXX = g++
-FLAGS = -Wall -pedantic -O3 -std=c++17 -fopenmp -Iinclude
+CXX := g++
+AR  := ar
 
-LEO_ENTITIES := src/leo/entities/expressions_system.o \
-             src/leo/entities/hash_set.o \
-             src/leo/entities/helper_pool.o \
-             src/leo/entities/solution.o \
-             src/leo/entities/substitution.o \
-             src/leo/entities/vector.o \
-             src/leo/entities/vector_index.o
+CPPFLAGS := -Iinclude -MMD -MP
+CXXFLAGS := -Wall -pedantic -O3 -std=c++17 -fopenmp
+LDFLAGS  := -fopenmp
 
-LEO_SELECTORS := src/leo/optimization/selection/score_selector.o \
-              src/leo/optimization/selection/greedy_alternative_selector.o \
-              src/leo/optimization/selection/greedy_random_selector.o \
-              src/leo/optimization/selection/greedy_selector.o \
-              src/leo/optimization/selection/weighted_random_selector.o
+BUILD_DIR := build
+LIB_DIR   := $(BUILD_DIR)/lib
+LIB_PATH  := $(LIB_DIR)/libleo.a
 
-LEO_SOLVERS := src/leo/optimization/solvers/cse/common_subexpression_solver.o \
-            src/leo/optimization/solvers/cse/scorers/default_scorer.o \
-            src/leo/optimization/solvers/cse/scorers/intersections_scorer.o \
-            src/leo/optimization/solvers/cse/scorers/potential_scorer.o \
-            src/leo/optimization/solvers/solver.o \
-            src/leo/optimization/solvers/vector_covering/scorers/default_scorer.o \
-            src/leo/optimization/solvers/vector_covering/scorers/distance_scorer.o \
-            src/leo/optimization/solvers/vector_covering/vector_covering_solver.o \
+LIB_SOURCES := \
+    src/leo/entities/expressions_system.cpp \
+    src/leo/entities/hash_set.cpp \
+    src/leo/entities/helper_pool.cpp \
+    src/leo/entities/solution.cpp \
+    src/leo/entities/substitution.cpp \
+    src/leo/entities/vector.cpp \
+    src/leo/entities/vector_index.cpp \
+    src/leo/formatters/json_solution_formatter.cpp \
+    src/leo/formatters/plain_text_solution_formatter.cpp \
+    src/leo/formatters/slp_solution_formatter.cpp \
+    src/leo/optimization/reducer.cpp \
+    src/leo/optimization/selection/greedy_alternative_selector.cpp \
+    src/leo/optimization/selection/greedy_random_selector.cpp \
+    src/leo/optimization/selection/greedy_selector.cpp \
+    src/leo/optimization/selection/score_selector.cpp \
+    src/leo/optimization/selection/weighted_random_selector.cpp \
+    src/leo/optimization/solvers/cse/common_subexpression_solver.cpp \
+    src/leo/optimization/solvers/cse/scorers/default_scorer.cpp \
+    src/leo/optimization/solvers/cse/scorers/intersections_scorer.cpp \
+    src/leo/optimization/solvers/cse/scorers/potential_scorer.cpp \
+    src/leo/optimization/solvers/solver.cpp \
+    src/leo/optimization/solvers/vector_covering/scorers/default_scorer.cpp \
+    src/leo/optimization/solvers/vector_covering/scorers/distance_scorer.cpp \
+    src/leo/optimization/solvers/vector_covering/vector_covering_solver.cpp \
+    src/leo/optimization/strategy_pool.cpp \
+    src/leo/optimization/strategy_presets.cpp \
+    src/leo/utils/solution_sign_optimizer.cpp \
+    src/leo/utils/solution_substitution_inliner.cpp \
+    src/leo/utils/solution_transposer.cpp \
+    src/leo/utils/solution_validator.cpp
 
-LEO_OPTIMIZATION := src/leo/optimization/reducer.o \
-                 src/leo/optimization/strategy_pool.o \
-                 src/leo/optimization/strategy_presets.o
+APP_SOURCES := \
+    src/cli/arg_parser.cpp \
+    src/cli/argument.cpp \
+    src/io/expressions_readers/sms_expressions_reader.cpp \
+    src/io/expressions_readers/txt_expressions_reader.cpp \
+    src/utils.cpp
 
-LEO_FORMATTERS := src/leo/formatters/json_solution_formatter.o \
-               src/leo/formatters/plain_text_solution_formatter.o \
-               src/leo/formatters/slp_solution_formatter.o
+LIB_OBJECTS := $(LIB_SOURCES:%.cpp=$(BUILD_DIR)/%.o)
+APP_OBJECTS := $(APP_SOURCES:%.cpp=$(BUILD_DIR)/%.o)
+MAIN_OBJECT := $(BUILD_DIR)/main.o
+REDUCE_OBJECT := $(BUILD_DIR)/src/tools/reduce.o
 
-LEO_UTILS := src/leo/utils/solution_sign_optimizer.o \
-          src/leo/utils/solution_substitution_inliner.o \
-          src/leo/utils/solution_transposer.o \
-          src/leo/utils/solution_validator.o
+DEPS := $(LIB_OBJECTS:.o=.d) $(APP_OBJECTS:.o=.d) \
+        $(MAIN_OBJECT:.o=.d) $(REDUCE_OBJECT:.o=.d)
 
+.PHONY: all library clean
 
-UTILS := src/utils.o
+all: library main reduce
 
-CLI := src/cli/argument.o src/cli/arg_parser.o
+library: $(LIB_PATH)
 
-IO := src/io/expressions_readers/sms_expressions_reader.o \
-   src/io/expressions_readers/txt_expressions_reader.o
+$(LIB_PATH): $(LIB_OBJECTS) | $(LIB_DIR)
+	$(AR) rcs $@ $^
 
-LEO_OBJECTS := $(LEO_ENTITIES) $(LEO_SELECTORS) $(LEO_SOLVERS) $(LEO_OPTIMIZATION) $(LEO_FORMATTERS) $(LEO_UTILS)
-OBJECTS := $(LEO_OBJECTS) $(UTILS) $(CLI) $(IO)
+main: $(MAIN_OBJECT) $(APP_OBJECTS) $(LIB_PATH)
+	$(CXX) $(LDFLAGS) $^ -o $@
 
-all: main reduce
+reduce: $(REDUCE_OBJECT) $(APP_OBJECTS) $(LIB_PATH)
+	$(CXX) $(LDFLAGS) $^ -o $@
 
-reduce: $(OBJECTS)
-	$(CXX) $(FLAGS) $(OBJECTS) src/tools/reduce.cpp -o reduce
+$(BUILD_DIR)/%.o: %.cpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-main: $(OBJECTS)
-	$(CXX) $(FLAGS) $(OBJECTS) main.cpp -o main
-
-%.o: %.cpp
-	$(CXX) $(FLAGS) -c $< -o $@
+$(LIB_DIR):
+	mkdir -p $@
 
 clean:
-	rm -rf $(OBJECTS)
+	rm -rf $(BUILD_DIR) main reduce
+
+-include $(DEPS)
