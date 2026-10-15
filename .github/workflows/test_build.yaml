@@ -7,14 +7,14 @@ on:
     branches: ["master"]
 
 jobs:
-  linux:
+  test-build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build
         run: make -j$(nproc)
 
-  windows:
+  test-build-windows:
     runs-on: windows-latest
     defaults:
       run:
@@ -28,5 +28,6 @@ jobs:
           install: >-
             make
             mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-libgomp
       - name: Build
         run: make -j$(nproc)
