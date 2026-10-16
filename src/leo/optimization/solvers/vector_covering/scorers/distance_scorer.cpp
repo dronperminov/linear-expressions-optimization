@@ -23,7 +23,7 @@ void DistanceScorer::score(const std::vector<Candidate>& candidates, const Conte
     for (const Vector& target : context.uncovered) {
         maxSupport = std::max(maxSupport, target.getSupport());
 
-        uint64_t hash = getFingerprint(target);
+        uint64_t hash = target.getFingerprint();
 
         if (twos.contains(hash)) {
             near2.push_back({&target, hash});
@@ -48,7 +48,7 @@ void DistanceScorer::score(const std::vector<Candidate>& candidates, const Conte
             continue;
         }
 
-        const uint64_t hash = getFingerprint(vector);
+        const uint64_t hash = vector.getFingerprint();
 
         size_t gain2 = getGain(hash, near2);
         size_t gain3 = getGain(hash, near3, ones);
@@ -71,7 +71,7 @@ std::vector<uint64_t> DistanceScorer::getFingerptints(const std::vector<Vector>&
     std::vector<uint64_t> fingerprints(vectors.size());
 
     for (size_t i = 0; i < vectors.size(); i++)
-        fingerprints[i] = getFingerprint(vectors[i]);
+        fingerprints[i] = vectors[i].getFingerprint();
 
     return fingerprints;
 }
@@ -125,22 +125,6 @@ double DistanceScorer::getSavingScore(const std::vector<Target>& targets, const 
             score += savingsWeight * save;
 
     return score;
-}
-
-uint64_t DistanceScorer::mix(uint64_t x) const {
-    x += 0x9e3779b97f4a7c15ULL;
-    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
-    return x ^ (x >> 31);
-}
-
-uint64_t DistanceScorer::getFingerprint(const Vector& vector) const {
-    uint64_t hash = 0;
-
-    for (size_t i = 0; i < vector.getDimension(); i++)
-        hash += static_cast<uint64_t>(static_cast<int64_t>(vector[i])) * (mix(i + 1) | 1);
-
-    return hash;
 }
 
 } // namespace leo::vector_covering

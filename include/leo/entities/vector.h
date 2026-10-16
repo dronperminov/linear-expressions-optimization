@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace leo {
@@ -11,6 +12,9 @@ public:
     Vector(const std::vector<int>& values);
     Vector(size_t dimension);
     Vector(size_t dimension, size_t index);
+
+    void set(size_t index, int value);
+    int get(size_t index) const;
 
     Vector operator+(const Vector& vector) const;
     Vector operator-(const Vector& vector) const;
@@ -25,7 +29,6 @@ public:
     Vector addScaled(const Vector& vector, int scale) const;
 
     int operator[](size_t index) const;
-    int& operator[](size_t index);
     size_t getHash() const;
 
     bool operator==(const Vector& vector) const;
@@ -41,12 +44,15 @@ public:
     size_t getMatchesCount(const Vector& vector) const;
     std::vector<size_t> getNonZeroIndices() const;
     size_t getNonZeroIndex() const;
+    uint64_t getFingerprint() const;
 
     bool isZero() const;
     bool isOneHot() const;
     bool isSubVector(const Vector& vector) const;
 
     void canonize();
+private:
+    uint64_t mix(uint64_t x) const;
 };
 
 } // namespace leo

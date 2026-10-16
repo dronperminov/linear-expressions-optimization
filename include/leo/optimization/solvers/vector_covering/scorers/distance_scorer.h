@@ -34,9 +34,6 @@ private:
     size_t getGain(uint64_t hash, const std::vector<Target>& targets) const;
     size_t getGain(uint64_t hash, const std::vector<Target>& targets, const HashSet& set) const;
     double getSavingScore(const std::vector<Target>& targets, const Vector& vector) const;
-
-    uint64_t mix(uint64_t x) const;
-    uint64_t getFingerprint(const Vector& vector) const;
 };
 
 } // namespace leo::vector_covering

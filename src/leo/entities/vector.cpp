@@ -19,6 +19,14 @@ Vector::Vector(size_t dimension, size_t index) : values(dimension, 0) {
     values[index] = 1;
 }
 
+void Vector::set(size_t index, int value) {
+    values[index] = value;
+}
+
+int Vector::get(size_t index) const {
+    return values[index];
+}
+
 Vector Vector::operator+(const Vector& vector) const {
     std::vector<int> result(values.size());
 
@@ -92,10 +100,6 @@ Vector Vector::addScaled(const Vector& vector, int scale) const {
 }
 
 int Vector::operator[](size_t index) const {
-    return values[index];
-}
-
-int& Vector::operator[](size_t index) {
     return values[index];
 }
 
@@ -216,6 +220,15 @@ size_t Vector::getNonZeroIndex() const {
     throw std::runtime_error("Vector::getNonZeroIndex: vector is zero");
 }
 
+uint64_t Vector::getFingerprint() const {
+    uint64_t hash = 0;
+
+    for (size_t i = 0; i < values.size(); i++)
+        hash += values[i] * (mix(i + 1) | 1);
+
+    return hash;
+}
+
 bool Vector::isZero() const {
     for (int value : values)
         if (value)
@@ -261,6 +274,13 @@ void Vector::canonize() {
 
         values[i] *= sign;
     }
+}
+
+uint64_t Vector::mix(uint64_t x) const {
+    x += 0x9e3779b97f4a7c15ULL;
+    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
+    return x ^ (x >> 31);
 }
 
 } // namespace leo
