@@ -15,7 +15,9 @@ namespace leo {
 
 struct ReduceParameters {
     bool boundByBest;
-    bool startFromVectors;
+    bool startFromSolutions;
+    double minAdditionsRatio;
+    double maxAdditionsRatio;
     double minRemoveVectors;
     double maxRemoveVectors;
 };
@@ -27,6 +29,7 @@ class Reducer {
         Solution solution;
         size_t additions;
         std::string strategyName;
+        HelperPool pool;
         std::vector<Solution> solutions;
         std::vector<double> weights;
 

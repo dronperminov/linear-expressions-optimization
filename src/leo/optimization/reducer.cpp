@@ -29,7 +29,8 @@ Reducer::Group::Group(const ExpressionsSystem& expressionsSystem) :
                       lowerBound(expressionsSystem.getAdditionsLowerBound()),
                       solution(expressionsSystem.getNaiveSolution()),
                       additions(expressionsSystem.getNaiveAdditions()),
-                      strategyName("naive") {
+                      strategyName("naive"),
+                      pool(expressionsSystem.getVariablesCount()) {
 
 }
 
@@ -82,17 +83,27 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
 
             std::optional<size_t> result;
 
-            if (!parameters.startFromVectors || !solver->canStartFromVectors() || groups[group].solutions.empty()) {
+            if (!parameters.startFromSolutions || groups[group].solutions.empty()) {
                 result = solver->solve();
             }
             else {
                 std::mt19937 generator(task.seed);
+                std::uniform_real_distribution<double> uniform(0.0, 1.0);
 
-                std::discrete_distribution<size_t> distribution(groups[group].weights.begin(), groups[group].weights.end());
-                const Solution& solution = groups[group].solutions[distribution(generator)];
-                std::vector<Vector> intermediates = getIntermediates(groups[group].expressionsSystem->getExpressions(), solution);
-                std::vector<Vector> vectors = getVectors(intermediates, generator, parameters.minRemoveVectors, parameters.maxRemoveVectors);
-                result = solver->solve(vectors);
+                if (uniform(generator) < 0.5) {
+                    size_t minAdditions = groups[group].additions * parameters.minAdditionsRatio;
+                    size_t maxAdditions = groups[group].additions * parameters.maxAdditionsRatio;
+                    std::uniform_int_distribution<size_t> distribution(minAdditions, maxAdditions);
+                    std::vector<Substitution> substitutions = groups[group].pool.getRandomSubstitutions(generator, distribution(generator));
+                    result = solver->solve(substitutions);
+                }
+                else {
+                    std::discrete_distribution<size_t> distribution(groups[group].weights.begin(), groups[group].weights.end());
+                    const Solution& solution = groups[group].solutions[distribution(generator)];
+                    std::vector<Vector> intermediates = getIntermediates(groups[group].expressionsSystem->getExpressions(), solution);
+                    std::vector<Vector> vectors = getVectors(intermediates, generator, parameters.minRemoveVectors, parameters.maxRemoveVectors);
+                    result = solver->solve(vectors);
+                }
             }
 
             if (!result)
@@ -102,10 +113,10 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
             std::optional<ReducerResult>& local = localBest[group];
             bool isBetter = solverAdditions < (local ? local->additions : groups[group].additions);
 
-            if (isBetter || parameters.startFromVectors) {
+            if (isBetter || parameters.startFromSolutions) {
                 Solution solution = solver->getSolution();
 
-                if (parameters.startFromVectors)
+                if (parameters.startFromSolutions)
                     localSolutions[group].push_back(solution);
 
                 if (isBetter)
@@ -142,10 +153,17 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
         }
 
         groups[group].solutions = {groups[group].solution};
+
+        if (collected.empty())
+            continue;
+
         for (const Solution& solution : collected[group])
             groups[group].solutions.push_back(solution);
 
         groups[group].weights = getWeights(groups[group].solutions, groups[group].additions);
+
+        for (size_t i = 0; i < groups[group].solutions.size(); i++)
+            groups[group].pool.addSolution(groups[group].solutions[i], groups[group].weights[i]);
     }
 
     return improved;
