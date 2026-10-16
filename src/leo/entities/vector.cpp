@@ -247,33 +247,39 @@ bool Vector::isOneHot() const {
 }
 
 bool Vector::isSubVector(const Vector& vector) const {
-    bool positive = true;
-    bool negative = true;
-
-    for (size_t i = 0; i < values.size(); i++) {
-        if (values[i]) {
-            positive &= values[i] == vector.values[i];
-            negative &= values[i] == -vector.values[i];
-        }
-    }
-
-    return positive || negative;
-}
-
-void Vector::canonize() {
-    int sign = 1;
-    bool first = false;
+    int sign = 0;
 
     for (size_t i = 0; i < values.size(); i++) {
         int value = values[i];
+        if (value == 0)
+            continue;
 
-        if (!first && value != 0) {
-            first = true;
-            sign = value > 0 ? 1 : -1;
+        int target = vector.values[i];
+
+        if (sign == 0) {
+            sign = (value == target) ? 1 : (value == -target) ? -1 : 0;
+
+            if (sign == 0)
+                return false;
         }
-
-        values[i] *= sign;
+        else if (value != sign * target) {
+            return false;
+        }
     }
+
+    return true;
+}
+
+void Vector::canonize() {
+    size_t i = 0;
+    while (i < values.size() && values[i] == 0)
+        i++;
+
+    if (i == values.size() || values[i] > 0)
+        return;
+
+    for (size_t j = i; j < values.size(); j++)
+        values[j] = -values[j];
 }
 
 uint64_t Vector::mix(uint64_t x) const {

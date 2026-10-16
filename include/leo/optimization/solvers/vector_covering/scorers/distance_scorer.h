@@ -27,7 +27,6 @@ public:
 
     void score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const override;
 private:
-    std::vector<uint64_t> getFingerptints(const std::vector<Vector>& vectors) const;
     void fillOnesAndTwos(const std::vector<uint64_t>& fingerprints, HashSet& ones, HashSet& twos) const;
     bool isNear(uint64_t hash, const std::vector<uint64_t>& fingerprints, const HashSet& set) const;
 

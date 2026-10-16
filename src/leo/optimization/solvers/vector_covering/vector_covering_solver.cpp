@@ -116,6 +116,7 @@ void VectorCoveringSolver::initialize() {
     uncovered.clear();
     pool.clear();
     vectors.clear();
+    fingerprints.clear();
     steps.clear();
 
     used.clear();
@@ -127,6 +128,7 @@ void VectorCoveringSolver::initialize() {
     for (size_t i = 0; i < dimension; i++) {
         Vector basis(dimension, i);
         pool[basis.getCanonized()] = i;
+        fingerprints.emplace_back(basis.getFingerprint());
         vectors.emplace_back(basis);
     }
 
@@ -174,7 +176,7 @@ void VectorCoveringSolver::addCandidate(size_t i, size_t j, int sign) {
         return;
 
     unique.insert(canonized);
-    candidates.push_back({{i, j, 1, sign}, vector, canonized});
+    candidates.push_back({{i, j, 1, sign}, vector, canonized, canonized.getFingerprint()});
 }
 
 void VectorCoveringSolver::useCandidate(const Candidate& candidate) {
@@ -182,6 +184,7 @@ void VectorCoveringSolver::useCandidate(const Candidate& candidate) {
 
     pool[candidate.canonized] = index;
     vectors.push_back(candidate.vector);
+    fingerprints.push_back(candidate.fingerprint);
     steps.push_back(candidate.step);
     used.push_back(false);
 
@@ -212,7 +215,7 @@ std::optional<size_t> VectorCoveringSolver::build() {
         initializeCandidates();
 
     while (!uncovered.empty() && !isBounded() && !isTimeout()) {
-        scorer->score(candidates, {uncovered, vectors}, scores);
+        scorer->score(candidates, {uncovered, vectors, fingerprints}, scores);
         size_t index = selector->selectIndex(scores, generator);
         useCandidate(candidates[index]);
 
@@ -225,6 +228,7 @@ std::optional<size_t> VectorCoveringSolver::build() {
 
     candidates.clear();
     unique.clear();
+    fingerprints.clear();
 
     if (!uncovered.empty()) {
         if (parameters.naiveFallback)

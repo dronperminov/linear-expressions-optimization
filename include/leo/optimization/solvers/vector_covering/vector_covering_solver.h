@@ -33,6 +33,7 @@ class VectorCoveringSolver : public Solver {
     std::unordered_set<Vector> uncovered;
     std::unordered_map<Vector, size_t> pool;
     std::vector<Vector> vectors;
+    std::vector<uint64_t> fingerprints;
     std::vector<Substitution> steps;
     std::vector<bool> used;
     size_t usedCount;

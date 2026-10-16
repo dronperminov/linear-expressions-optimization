@@ -11,11 +11,9 @@ DistanceScorer::DistanceScorer(double gainWeight, double tieWeight, double savin
 }
 
 void DistanceScorer::score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const {
-    std::vector<uint64_t> fingerprints = getFingerptints(context.vectors);
-
-    HashSet ones(2 * fingerprints.size());
-    HashSet twos(2 * fingerprints.size() * (fingerprints.size() - 1));
-    fillOnesAndTwos(fingerprints, ones, twos);
+    HashSet ones(2 * context.fingerprints.size());
+    HashSet twos(2 * context.fingerprints.size() * (context.fingerprints.size() - 1));
+    fillOnesAndTwos(context.fingerprints, ones, twos);
 
     size_t maxSupport = 0;
     std::vector<Target> near2, near3, far4;
@@ -30,7 +28,7 @@ void DistanceScorer::score(const std::vector<Candidate>& candidates, const Conte
             continue;
         }
 
-        if (isNear(hash, fingerprints, twos)) {
+        if (isNear(hash, context.fingerprints, twos)) {
             near3.push_back({&target, hash});
         }
         else {
@@ -48,7 +46,7 @@ void DistanceScorer::score(const std::vector<Candidate>& candidates, const Conte
             continue;
         }
 
-        const uint64_t hash = vector.getFingerprint();
+        const uint64_t hash = candidates[index].fingerprint;
 
         size_t gain2 = getGain(hash, near2);
         size_t gain3 = getGain(hash, near3, ones);
@@ -67,25 +65,19 @@ void DistanceScorer::score(const std::vector<Candidate>& candidates, const Conte
     }
 }
 
-std::vector<uint64_t> DistanceScorer::getFingerptints(const std::vector<Vector>& vectors) const {
-    std::vector<uint64_t> fingerprints(vectors.size());
-
-    for (size_t i = 0; i < vectors.size(); i++)
-        fingerprints[i] = vectors[i].getFingerprint();
-
-    return fingerprints;
-}
-
 void DistanceScorer::fillOnesAndTwos(const std::vector<uint64_t>& fingerprints, HashSet& ones, HashSet& twos) const {
     for (size_t i = 0; i < fingerprints.size(); i++) {
         ones.insert(fingerprints[i]);
-        ones.insert(0 - fingerprints[i]);
+        ones.insert(-fingerprints[i]);
 
         for (size_t j = i + 1; j < fingerprints.size(); j++) {
-            twos.insert(fingerprints[i] + fingerprints[j]);
-            twos.insert(fingerprints[i] - fingerprints[j]);
-            twos.insert(fingerprints[j] - fingerprints[i]);
-            twos.insert(0 - fingerprints[i] - fingerprints[j]);
+            uint64_t sum = fingerprints[i] + fingerprints[j];
+            uint64_t sub = fingerprints[i] - fingerprints[j];
+
+            twos.insert(sum);
+            twos.insert(sub);
+            twos.insert(-sum);
+            twos.insert(-sub);
         }
     }
 }
