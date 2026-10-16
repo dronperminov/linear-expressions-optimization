@@ -211,10 +211,8 @@ Solution inlineSubstitutions(const Solution& solution, const ArgParser& parser) 
 }
 
 Solution optimizeInversions(const Solution& solution, const ArgParser& parser, std::mt19937& generator) {
-    size_t iterations = std::stoull(parser["--optimize-signs-iterations"]);
-
     SolutionSignOptimizer optimizer;
-    Solution optimized = optimizer.optimize(solution, generator, iterations);
+    Solution optimized = optimizer.optimize(solution, generator);
 
     size_t inversionsBefore = solution.getInversions();
     size_t inversionsAfter = optimized.getInversions();
@@ -310,7 +308,7 @@ int main(int argc, char** argv) {
 
     parser.addSection("Post-processing");
     parser.add("--inline-substitutions", ArgType::Flag, "Inline substitutions that occur only once");
-    parser.add("--optimize-signs-iterations", ArgType::UInt, "Number of iterations of the sign inversion optimizer; 0 disables it", "0");
+    parser.add("--optimize-inversions", ArgType::Flag, "Optimize the number of sign inversions in the solution");
     parser.add("--validate", ArgType::Flag, "Validate the resulting solution");
 
     parser.addSection("Diagnostics");
@@ -396,7 +394,7 @@ int main(int argc, char** argv) {
         std::cout << std::endl;
         std::cout << "Post-processing:" << std::endl;
         std::cout << "- inline substitutions: " << (parser.isSet("--inline-substitutions") ? "yes" : "no") << std::endl;
-        std::cout << "- optimize inversions: " << (std::stoul(parser["--optimize-signs-iterations"]) > 0 ? "yes (" + parser["--optimize-signs-iterations"] + " iterations)" : "no") << std::endl;
+        std::cout << "- optimize inversions: " << (parser.isSet(parser["--optimize-inversions"]) ? "yes" : "no") << std::endl;
         std::cout << "- validate solution: " << (parser.isSet("--validate") ? "yes" : "no") << std::endl;
         std::cout << std::endl;
     }
@@ -421,7 +419,7 @@ int main(int argc, char** argv) {
         if (parser.isSet("--inline-substitutions"))
             solution = inlineSubstitutions(solution, parser);
 
-        if (std::stoull(parser["--optimize-signs-iterations"]) > 0)
+        if (parser.isSet("--optimize-inversions"))
             solution = optimizeInversions(solution, parser, generator);
 
         auto t2 = std::chrono::steady_clock::now();

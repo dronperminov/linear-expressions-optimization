@@ -20,7 +20,7 @@ class SolutionSignOptimizer {
 public:
     SolutionSignOptimizer(double startTemp = 1.0, double endTemp = 0.05, size_t stepsPerVariable = 100);
 
-    Solution optimize(const Solution& solution, std::mt19937& generator, size_t restarts) const;
+    Solution optimize(const Solution& solution, std::mt19937& generator, size_t restarts = 1000) const;
 private:
     std::vector<SubstitutionUsage> getUsage(const Solution& solution) const;
 
