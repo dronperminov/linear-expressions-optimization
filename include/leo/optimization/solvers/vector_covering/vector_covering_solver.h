@@ -38,6 +38,10 @@ class VectorCoveringSolver : public Solver {
     std::vector<bool> used;
     size_t usedCount;
 
+    std::unordered_set<Vector> wanted;
+    std::vector<Candidate> forced;
+    bool seeded;
+
     std::vector<double> scores;
     std::vector<Candidate> candidates;
     std::unordered_set<Vector> unique;
@@ -67,6 +71,7 @@ private:
     void useCandidate(const Candidate& candidate);
 
     void addTargetPairs();
+    void addForced();
 
     std::optional<size_t> build();
     size_t buildNaive();

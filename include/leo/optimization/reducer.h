@@ -15,9 +15,9 @@ namespace leo {
 
 struct ReduceParameters {
     bool boundByBest;
-    bool startFromSubstitutions;
-    double minStartRatio;
-    double maxStartRatio;
+    bool startFromVectors;
+    double minRemoveVectors;
+    double maxRemoveVectors;
 };
 
 class Reducer {
@@ -27,7 +27,8 @@ class Reducer {
         Solution solution;
         size_t additions;
         std::string strategyName;
-        HelperPool pool;
+        std::vector<Solution> solutions;
+        std::vector<double> weights;
 
         Group(const ExpressionsSystem& expressionsSystem);
     };
@@ -50,6 +51,8 @@ public:
     const std::string& getStrategyName(size_t group) const;
 
     std::vector<double> getWeights(const std::vector<Solution>& solutions, size_t best, double temperature = 1.0, double eps = 0.01) const;
+    std::vector<Vector> getIntermediates(const std::vector<std::vector<int>>& expressions, const Solution& solution);
+    std::vector<Vector> getVectors(const std::vector<Vector>& intermediates, std::mt19937& generator, size_t minRemoved, size_t maxRemoved);
 };
 
 } // namespace leo

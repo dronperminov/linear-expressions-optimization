@@ -43,6 +43,7 @@ bool VectorCoveringSolver::canStartFromVectors() const {
 }
 
 std::optional<size_t> VectorCoveringSolver::solve() {
+    seeded = false;
     initializeDeadline();
     initialize();
 
@@ -53,6 +54,7 @@ std::optional<size_t> VectorCoveringSolver::solve() {
 }
 
 std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution>& substitutions) {
+    seeded = false;
     initializeDeadline();
     initialize();
 
@@ -66,7 +68,7 @@ std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution
         if (pool.find(canonized) != pool.end())
             throw std::invalid_argument("VectorCoveringSolver::solve: substitution produces existing vector");
 
-        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
+        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized, canonized.getFingerprint()});
     }
 
     if (parameters.addTargetPairs)
@@ -76,10 +78,9 @@ std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution
 }
 
 std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Vector>& seeds) {
+    seeded = true;
     initializeDeadline();
     initialize();
-
-    std::unordered_set<Vector> wanted;
 
     for (const Vector& seed : seeds) {
         if (seed.getDimension() != dimension)
@@ -89,11 +90,13 @@ std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Vector>& see
             continue;
 
         Vector canonized = seed.getCanonized();
-        if (pool.find(canonized) == pool.end())
-            wanted.insert(std::move(canonized));
+        if (targets.find(canonized) != targets.end())
+            continue;
+
+        wanted.insert(canonized);
     }
 
-    return build(); // TODO
+    return build();
 }
 
 Solution VectorCoveringSolver::getSolution() const {
@@ -157,6 +160,9 @@ void VectorCoveringSolver::initialize() {
         vectors.emplace_back(basis);
     }
 
+    wanted.clear();
+    forced.clear();
+
     solved = false;
 }
 
@@ -201,7 +207,14 @@ void VectorCoveringSolver::addCandidate(size_t i, size_t j, int sign) {
         return;
 
     unique.insert(canonized);
-    candidates.push_back({{i, j, 1, sign}, vector, canonized, canonized.getFingerprint()});
+    Candidate candidate{{i, j, 1, sign}, vector, canonized, canonized.getFingerprint()};
+
+    if (seeded && (wanted.count(canonized) || uncovered.count(canonized))) {
+        forced.push_back(std::move(candidate));
+    }
+    else {
+        candidates.push_back(std::move(candidate));
+    }
 }
 
 void VectorCoveringSolver::useCandidate(const Candidate& candidate) {
@@ -231,15 +244,34 @@ void VectorCoveringSolver::addTargetPairs() {
         Vector vector = vectors[i] * target[i] + vectors[j] * target[j];
         Vector canonized = vector.getCanonized();
 
-        useCandidate({{i, j, target[i], target[j]}, vector, canonized});
+        useCandidate({{i, j, target[i], target[j]}, vector, canonized, canonized.getFingerprint()});
+    }
+}
+
+void VectorCoveringSolver::addForced() {
+    while (!forced.empty()) {
+        Candidate candidate = std::move(forced.back());
+        forced.pop_back();
+
+        wanted.erase(candidate.canonized);
+        useCandidate(candidate);
+
+        if (uncovered.empty()) {
+            forced.clear();
+            return;
+        }
+
+        updateCandidates();
     }
 }
 
 std::optional<size_t> VectorCoveringSolver::build() {
-    if (!uncovered.empty())
+    if (!uncovered.empty()) {
         initializeCandidates();
+        addForced();
+    }
 
-    while (!uncovered.empty() && !isBounded() && !isTimeout()) {
+    while (!uncovered.empty() && !candidates.empty() && !isBounded() && !isTimeout()) {
         scorer->score(candidates, {uncovered, vectors, fingerprints}, scores);
         size_t index = selector->selectIndex(scores, generator);
         useCandidate(candidates[index]);
@@ -248,10 +280,12 @@ std::optional<size_t> VectorCoveringSolver::build() {
             updateCandidates();
             candidates[index] = candidates.back();
             candidates.pop_back();
+            addForced();
         }
     }
 
     candidates.clear();
+    forced.clear();
     unique.clear();
     fingerprints.clear();
 
@@ -361,7 +395,7 @@ void VectorCoveringSolver::removeUnused() {
 }
 
 bool VectorCoveringSolver::isBounded() const {
-    if (parameters.removeUnused)
+    if (parameters.ignoreUnusedInBound)
         return usedCount + uncovered.size() > bound;
 
     return steps.size() + uncovered.size() > bound;

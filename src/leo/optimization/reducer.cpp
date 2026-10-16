@@ -7,6 +7,7 @@
 #include <optional>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace leo {
 
@@ -28,8 +29,7 @@ Reducer::Group::Group(const ExpressionsSystem& expressionsSystem) :
                       lowerBound(expressionsSystem.getAdditionsLowerBound()),
                       solution(expressionsSystem.getNaiveSolution()),
                       additions(expressionsSystem.getNaiveAdditions()),
-                      strategyName("naive"),
-                      pool(expressionsSystem.getVariablesCount()) {
+                      strategyName("naive") {
 
 }
 
@@ -82,17 +82,17 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
 
             std::optional<size_t> result;
 
-            if (!parameters.startFromSubstitutions || !solver->canStartFromSubstitutions() || groups[group].pool.empty()) {
+            if (!parameters.startFromVectors || !solver->canStartFromVectors() || groups[group].solutions.empty()) {
                 result = solver->solve();
             }
             else {
                 std::mt19937 generator(task.seed);
 
-                size_t minAdditions = groups[group].additions * parameters.minStartRatio;
-                size_t maxAdditions = groups[group].additions * parameters.maxStartRatio;
-                std::uniform_int_distribution<size_t> distribution(minAdditions, maxAdditions);
-                std::vector<Substitution> substitutions = groups[group].pool.getRandomSubstitutions(generator, distribution(generator));
-                result = solver->solve(substitutions);
+                std::discrete_distribution<size_t> distribution(groups[group].weights.begin(), groups[group].weights.end());
+                const Solution& solution = groups[group].solutions[distribution(generator)];
+                std::vector<Vector> intermediates = getIntermediates(groups[group].expressionsSystem->getExpressions(), solution);
+                std::vector<Vector> vectors = getVectors(intermediates, generator, parameters.minRemoveVectors, parameters.maxRemoveVectors);
+                result = solver->solve(vectors);
             }
 
             if (!result)
@@ -102,10 +102,10 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
             std::optional<ReducerResult>& local = localBest[group];
             bool isBetter = solverAdditions < (local ? local->additions : groups[group].additions);
 
-            if (isBetter || parameters.startFromSubstitutions) {
+            if (isBetter || parameters.startFromVectors) {
                 Solution solution = solver->getSolution();
 
-                if (parameters.startFromSubstitutions)
+                if (parameters.startFromVectors)
                     localSolutions[group].push_back(solution);
 
                 if (isBetter)
@@ -141,12 +141,11 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
             improved = true;
         }
 
-        if (collected[group].empty())
-            continue;
+        groups[group].solutions = {groups[group].solution};
+        for (const Solution& solution : collected[group])
+            groups[group].solutions.push_back(solution);
 
-        std::vector<double> weights = getWeights(collected[group], groups[group].additions);
-        for (size_t i = 0; i < collected[group].size(); i++)
-            groups[group].pool.addSolution(collected[group][i], weights[i]);
+        groups[group].weights = getWeights(groups[group].solutions, groups[group].additions);
     }
 
     return improved;
@@ -201,6 +200,65 @@ std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, 
         weight = weight / sum * (1 - eps) + uniform * eps;
 
     return weights;
+}
+
+std::vector<Vector> Reducer::getIntermediates(const std::vector<std::vector<int>>& expressions, const Solution& solution) {
+    std::unordered_set<Vector> targets;
+
+    for (const std::vector<int>& expression : expressions) {
+        Vector target(expression);
+
+        if (target.getSupport() >= 2)
+            targets.insert(target.getCanonized());
+    }
+
+    std::vector<Vector> vectors;
+    vectors.reserve(solution.dimension + solution.substitutions.size());
+    for (size_t i = 0; i < solution.dimension; i++)
+        vectors.emplace_back(solution.dimension, i);
+
+    std::unordered_set<Vector> seen;
+    std::vector<Vector> intermediates;
+
+    for (const Substitution& s : solution.substitutions) {
+        Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
+        vectors.push_back(vector);
+
+        if (vector.getSupport() < 2)
+            continue;
+
+        Vector canonized = vector.getCanonized();
+        if (targets.count(canonized) || !seen.insert(canonized).second)
+            continue;
+
+        intermediates.push_back(std::move(canonized));
+    }
+
+    return intermediates;
+}
+
+std::vector<Vector> Reducer::getVectors(const std::vector<Vector>& intermediates, std::mt19937& generator, size_t minRemoved, size_t maxRemoved) {
+    std::uniform_int_distribution<size_t> distribution(minRemoved, std::max(minRemoved, maxRemoved));
+    size_t count = std::min(distribution(generator), intermediates.size());
+
+    std::vector<size_t> order(intermediates.size());
+    for (size_t i = 0; i < intermediates.size(); i++)
+        order[i] = i;
+
+    std::shuffle(order.begin(), order.end(), generator);
+
+    std::vector<bool> removed(intermediates.size(), false);
+    for (size_t i = 0; i < count; i++)
+        removed[order[i]] = true;
+
+    std::vector<Vector> vectors;
+    vectors.reserve(intermediates.size() - count);
+
+    for (size_t i = 0; i < intermediates.size(); i++)
+        if (!removed[i])
+            vectors.push_back(intermediates[i]);
+
+    return vectors;
 }
 
 } // namespace leo
