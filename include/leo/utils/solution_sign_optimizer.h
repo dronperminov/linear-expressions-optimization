@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <leo/entities/solution.h>
+#include <leo/entities/term.h>
 
 namespace leo {
 
@@ -30,6 +31,8 @@ private:
 
     bool isSubstitutionInverted(const Solution& solution, size_t index, const std::vector<int>& signs) const;
     bool isExpressionInverted(const Solution& solution, size_t index, const std::vector<int>& signs) const;
+
+    void fixExpression(std::vector<Term>& expression) const;
 
     Solution apply(const Solution& solution, const std::vector<int> &signs) const;
 };
