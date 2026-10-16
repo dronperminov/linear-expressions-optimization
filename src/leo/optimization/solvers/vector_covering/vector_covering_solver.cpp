@@ -38,6 +38,10 @@ bool VectorCoveringSolver::canStartFromSubstitutions() const {
     return true;
 }
 
+bool VectorCoveringSolver::canStartFromVectors() const {
+    return true;
+}
+
 std::optional<size_t> VectorCoveringSolver::solve() {
     initializeDeadline();
     initialize();
@@ -69,6 +73,27 @@ std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution
         addTargetPairs();
 
     return build();
+}
+
+std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Vector>& seeds) {
+    initializeDeadline();
+    initialize();
+
+    std::unordered_set<Vector> wanted;
+
+    for (const Vector& seed : seeds) {
+        if (seed.getDimension() != dimension)
+            throw std::invalid_argument("VectorCoveringSolver::solve: seed dimension does not match the system dimension");
+
+        if (seed.getSupport() < 2)
+            continue;
+
+        Vector canonized = seed.getCanonized();
+        if (pool.find(canonized) == pool.end())
+            wanted.insert(std::move(canonized));
+    }
+
+    return build(); // TODO
 }
 
 Solution VectorCoveringSolver::getSolution() const {
