@@ -9,6 +9,7 @@ struct Candidate {
     Substitution step;
     Vector vector;
     Vector canonized;
+    uint64_t fingerprint;
 };
 
 } // namespace leo::vector_covering

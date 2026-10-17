@@ -33,9 +33,14 @@ class VectorCoveringSolver : public Solver {
     std::unordered_set<Vector> uncovered;
     std::unordered_map<Vector, size_t> pool;
     std::vector<Vector> vectors;
+    std::vector<uint64_t> fingerprints;
     std::vector<Substitution> steps;
     std::vector<bool> used;
     size_t usedCount;
+
+    std::unordered_set<Vector> wanted;
+    std::vector<Candidate> forced;
+    bool seeded;
 
     std::vector<double> scores;
     std::vector<Candidate> candidates;
@@ -48,9 +53,11 @@ public:
     void setSelector(std::shared_ptr<const ScoreSelector> selector);
 
     bool canStartFromSubstitutions() const override;
+    bool canStartFromVectors() const override;
 
     std::optional<size_t> solve() override;
     std::optional<size_t> solve(const std::vector<Substitution>& substitutions) override;
+    std::optional<size_t> solve(const std::vector<Vector>& seeds) override;
     Solution getSolution() const override;
 private:
     void initializeTargets();
@@ -64,6 +71,7 @@ private:
     void useCandidate(const Candidate& candidate);
 
     void addTargetPairs();
+    void addForced();
 
     std::optional<size_t> build();
     size_t buildNaive();

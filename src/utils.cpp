@@ -46,6 +46,40 @@ std::string formatDuration(std::chrono::steady_clock::duration duration) {
     return oss.str();
 }
 
+std::string formatTimeInSeconds(double seconds) {
+    if (seconds <= 0)
+        return "unlimited";
+
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2);
+
+    if (seconds < 60) {
+        oss << seconds << " seconds";
+    }
+    else if (seconds < 3600) {
+        int minutes = seconds / 60;
+        double last = seconds - minutes * 60;
+
+        oss << minutes << " min";
+        if (last > 0.001)
+            oss << " " << last << " seconds";
+    }
+    else {
+        int hours = seconds / 3600;
+        double remainder = seconds - hours * 3600;
+        int minutes = remainder / 60;
+        double last = remainder - minutes * 60;
+
+        oss << hours << " h";
+        if (minutes > 0)
+            oss << " " << minutes << " min";
+        if (last > 0.001)
+            oss << " " << last << " seconds";
+    }
+
+    return oss.str();
+}
+
 std::string replace(const std::string& str, const std::string& from, const std::string& to) {
     if (from.empty())
         return str;

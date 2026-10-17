@@ -3,8 +3,6 @@
 #include <cmath>
 #include <unordered_set>
 
-#include <leo/entities/term.h>
-
 namespace leo {
 
 SolutionSignOptimizer::SolutionSignOptimizer(double startTemp, double endTemp, size_t stepsPerVariable) : startTemp(startTemp), endTemp(endTemp), stepsPerVariable(stepsPerVariable) {
@@ -137,6 +135,18 @@ bool SolutionSignOptimizer::isExpressionInverted(const Solution& solution, size_
     return true;
 }
 
+void SolutionSignOptimizer::fixExpression(std::vector<Term>& expression) const {
+    if (expression.empty() || expression[0].value > 0)
+        return;
+
+    for (size_t index = 1; index < expression.size(); index++) {
+        if (expression[index].value > 0) {
+            std::swap(expression[0], expression[index]);
+            return;
+        }
+    }
+}
+
 Solution SolutionSignOptimizer::apply(const Solution& solution, const std::vector<int> &signs) const {
     Solution result = solution;
 
@@ -152,9 +162,12 @@ Solution SolutionSignOptimizer::apply(const Solution& solution, const std::vecto
         }
     }
 
-    for (auto& expression : result.expressions)
+    for (auto& expression : result.expressions) {
         for (Term& term : expression)
             term.value *= getSign(term.index, result.dimension, signs);
+
+        fixExpression(expression);
+    }
 
     return result;
 }

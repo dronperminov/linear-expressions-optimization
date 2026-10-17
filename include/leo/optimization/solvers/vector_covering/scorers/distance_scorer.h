@@ -27,16 +27,12 @@ public:
 
     void score(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const override;
 private:
-    std::vector<uint64_t> getFingerptints(const std::vector<Vector>& vectors) const;
     void fillOnesAndTwos(const std::vector<uint64_t>& fingerprints, HashSet& ones, HashSet& twos) const;
     bool isNear(uint64_t hash, const std::vector<uint64_t>& fingerprints, const HashSet& set) const;
 
     size_t getGain(uint64_t hash, const std::vector<Target>& targets) const;
     size_t getGain(uint64_t hash, const std::vector<Target>& targets, const HashSet& set) const;
     double getSavingScore(const std::vector<Target>& targets, const Vector& vector) const;
-
-    uint64_t mix(uint64_t x) const;
-    uint64_t getFingerprint(const Vector& vector) const;
 };
 
 } // namespace leo::vector_covering
