@@ -89,7 +89,8 @@ TaskPool initTasks(const ExpressionsSystem& expressionsSystem, const ArgParser& 
 ReduceParameters getReduceParameters(const ArgParser& parser) {
     ReduceParameters parameters;
     parameters.boundByBest = parser.isSet("--bound-by-best");
-    parameters.startFromSolutions = std::stoull(parser["--rounds"]) > 1;
+    parameters.substitutionsRatio = std::stod(parser["--substitutions-ratio"]);
+    parameters.vectorsRatio = std::stod(parser["--vectors-ratio"]);
     parameters.minAdditionsRatio = std::stod(parser["--min-additions-ratio"]);
     parameters.maxAdditionsRatio = std::stod(parser["--max-additions-ratio"]);
     parameters.minRemoveVectors = std::stod(parser["--min-remove-vectors"]);
@@ -108,6 +109,11 @@ void printParsedArguments(const ArgParser& parser, uint32_t seed) {
     size_t threads = std::stoull(parser["--threads"]);
 
     size_t rounds = std::stoull(parser["--rounds"]);
+
+    double substitutionsRatio = std::stod(parser["--substitutions-ratio"]);
+    double vectorsRatio = std::stod(parser["--vectors-ratio"]);
+    double scratchRatio = std::max(0.0, 1.0 - substitutionsRatio - vectorsRatio);
+
     double minAdditionsRatio = std::stod(parser["--min-additions-ratio"]);
     double maxAdditionsRatio = std::stod(parser["--max-additions-ratio"]);
     double minRemoveVectors = std::stod(parser["--min-remove-vectors"]);
@@ -139,6 +145,7 @@ void printParsedArguments(const ArgParser& parser, uint32_t seed) {
     std::cout << "- use CSE only on first round: " << (parser.isSet("--cse-first-round-only") ? "yes" : "no") << std::endl;
     std::cout << "- try transposing: " << (parser.isSet("--try-transpose") ? "yes" : "no") << std::endl;
     std::cout << "- bound by best: " << (parser.isSet("--bound-by-best") ? "yes" : "no") << std::endl;
+    std::cout << "- start ratios (scratch / substitutions / vectors): " << scratchRatio << " / " << substitutionsRatio << " / " << vectorsRatio << std::endl;
     std::cout << "- additions ratios: " << minAdditionsRatio << " .. " << maxAdditionsRatio << std::endl;
     std::cout << "- remove vectors: " << minRemoveVectors << " .. " << maxRemoveVectors << std::endl;
     std::cout << std::endl;
@@ -365,13 +372,15 @@ int main(int argc, char** argv) {
 
     parser.addSection("Solving strategy");
     parser.add("--rounds", "-r", ArgType::Natural, "Number of rounds; each next round tries to improve solutions of the previous one", "1");
-    parser.add("--bound-by-best", "-b", ArgType::Flag, "Use the best solution found so far as an upper bound for subsequent solvers");
+    parser.add("--bound-by-best", "-b", ArgType::Flag, "Stop any solver that cannot beat the best solution found so far");
     parser.add("--try-transpose", "-T", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
     parser.add("--cse-first-round-only", ArgType::Flag, "Run CSE solvers only in the first round, later rounds use only vector covering solvers");
-    parser.add("--min-additions-ratio", ArgType::Ratio, "Minimum starting substitutions as a share of the best current additions (rounds after the first)", "0.1");
-    parser.add("--max-additions-ratio", ArgType::Ratio, "Maximum starting substitutions as a share of the best current additions (rounds after the first)", "0.5");
-    parser.add("--min-remove-vectors", ArgType::Natural, "TODO Minimum starting substitutions as a share of the best current additions (rounds after the first)", "1");
-    parser.add("--max-remove-vectors", ArgType::Natural, "TODO Maximum starting substitutions as a share of the best current additions (rounds after the first)", "8");
+    parser.add("--substitutions-ratio", ArgType::Ratio, "Share of tasks that start from substitutions sampled from earlier solutions (rounds after the first)", "0.5");
+    parser.add("--vectors-ratio", ArgType::Ratio, "Share of tasks that start from the vectors of an earlier solution with a few removed (rounds after the first)", "0.5");
+    parser.add("--min-additions-ratio", ArgType::Ratio, "Minimum length of the starting substitutions, as a share of the best solution's additions", "0.1");
+    parser.add("--max-additions-ratio", ArgType::Ratio, "Maximum length of the starting substitutions, as a share of the best solution's additions", "0.5");
+    parser.add("--min-remove-vectors", ArgType::Natural, "Minimum number of intermediate vectors removed from the starting solution", "1");
+    parser.add("--max-remove-vectors", ArgType::Natural, "Maximum number of intermediate vectors removed from the starting solution", "8");
 
     parser.addSection("Vector covering solver");
     parser.addChoices("--vec-preset", ArgType::String, "Strategies preset", {"default", "distance", "all"}, "distance");
@@ -402,6 +411,11 @@ int main(int argc, char** argv) {
 
     if (parser["--output-path"] == "stdout" && parser["--format"] == "auto") {
         std::cerr << "Format \"auto\" cannot be used with stdout. Specify the format explicitly." << std::endl;
+        return -1;
+    }
+
+    if (std::stod(parser["--substitutions-ratio"]) + std::stod(parser["--vectors-ratio"]) > 1.0) {
+        std::cerr << "Error: the sum of --substitutions-ratio and --vectors-ratio must be at most 1.0; decrease one of them" << std::endl;
         return -1;
     }
 
