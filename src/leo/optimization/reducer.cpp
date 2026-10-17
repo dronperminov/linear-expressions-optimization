@@ -1,24 +1,11 @@
 #include <leo/optimization/reducer.h>
 
-#include <algorithm>
 #include <atomic>
-#include <cmath>
+#include <chrono>
 #include <iterator>
 #include <stdexcept>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace leo {
-
-Reducer::Group::Group(const ExpressionsSystem& expressionsSystem) :
-                      expressionsSystem(&expressionsSystem),
-                      lowerBound(expressionsSystem.getAdditionsLowerBound()),
-                      solution(expressionsSystem.getNaiveSolution()),
-                      additions(expressionsSystem.getNaiveAdditions()),
-                      strategyName("naive"),
-                      pool(expressionsSystem.getVariablesCount()) {
-
-}
 
 Reducer::Reducer(size_t threads) : threads(threads ? threads : 1) {
 
@@ -33,7 +20,7 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
     if (pools.size() != groups.size())
         throw std::invalid_argument("Reducer::reduce: expected " + std::to_string(groups.size()) + " task pools (one per group), got " + std::to_string(pools.size()));
 
-    std::vector<Job> jobs = getJobs(pools);
+    std::vector<Job> jobs = getReduceJobs(pools);
     if (jobs.empty())
         return false;
 
@@ -41,12 +28,12 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
     for (size_t group = 0; group < groups.size(); group++)
         shared[group] = groups[group].additions;
 
-    std::vector<std::optional<ReducerResult>> best(groups.size(), std::nullopt);
+    std::vector<std::optional<ReduceResult>> best(groups.size(), std::nullopt);
     std::vector<std::vector<Solution>> collected(groups.size());
 
     #pragma omp parallel num_threads(threads)
     {
-        std::vector<std::optional<ReducerResult>> localBest(groups.size(), std::nullopt);
+        std::vector<std::optional<ReduceResult>> localBest(groups.size(), std::nullopt);
         std::vector<std::vector<Solution>> localSolutions(groups.size());
 
         #pragma omp for schedule(dynamic)
@@ -63,7 +50,7 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
             if (parameters.boundByBest)
                 solver->setBound(shared[group].load());
 
-            std::optional<size_t> result = solve(*solver, parameters, task, group);
+            std::optional<size_t> result = solve(*solver, parameters, task.seed, group);
             if (!result)
                 continue;
 
@@ -71,10 +58,10 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
             Solution solution = solver->getSolution();
             localSolutions[group].push_back(solution);
 
-            std::optional<ReducerResult>& local = localBest[group];
+            std::optional<ReduceResult>& local = localBest[group];
             bool isBetter = solverAdditions < (local ? local->additions : groups[group].additions);
             if (isBetter)
-                local = ReducerResult{solverAdditions, taskId, std::move(solution)};
+                local = ReduceResult{solverAdditions, taskId, std::move(solution)};
 
             size_t current = shared[group].load();
             while (solverAdditions < current && !shared[group].compare_exchange_weak(current, solverAdditions))
@@ -84,7 +71,7 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
         #pragma omp critical
         {
             for (size_t group = 0; group < groups.size(); group++) {
-                std::optional<ReducerResult>& local = localBest[group];
+                std::optional<ReduceResult>& local = localBest[group];
 
                 if (local && (!best[group] || std::tie(local->additions, local->taskId) < std::tie(best[group]->additions, best[group]->taskId)))
                     best[group] = std::move(local);
@@ -95,11 +82,86 @@ bool Reducer::reduce(const std::vector<TaskPool>& pools, const ReduceParameters&
         }
     }
 
-    return finalize(pools, best, collected);
+    return finalizeReduce(pools, best, collected);
+}
+
+bool Reducer::polish(const PolishParameters& parameters) {
+    if (parameters.maxRemoved == 0)
+        return false;
+
+    #pragma omp parallel for num_threads(threads) schedule(dynamic)
+    for (size_t group = 0; group < groups.size(); group++)
+        groups[group].pool.addAllProductions();
+
+    std::vector<Job> jobs = getPolishJobs(parameters);
+    if (jobs.empty())
+        return false;
+
+    std::vector<std::atomic<size_t>> shared(groups.size());
+    for (size_t group = 0; group < groups.size(); group++)
+        shared[group] = groups[group].additions;
+
+    std::vector<PolishResult> results;
+
+    #pragma omp parallel num_threads(threads)
+    {
+        std::vector<std::unique_ptr<HelperExchange>> exchanges(groups.size());
+        std::vector<PolishResult> local;
+
+        #pragma omp for schedule(dynamic)
+        for (size_t jobId = 0; jobId < jobs.size(); jobId++) {
+            const size_t group = jobs[jobId].group;
+            Group& g = groups[group];
+
+            if (shared[group] <= g.lowerBound)
+                continue;
+
+            if (!exchanges[group])
+                exchanges[group] = std::make_unique<HelperExchange>(g.pool);
+
+            Solution current = g.solutions[jobs[jobId].taskId];
+            bool improved = false;
+            const auto start = std::chrono::steady_clock::now();
+
+            while (current.getAdditions() > g.lowerBound) {
+                double remaining = parameters.maxTimeInSeconds - std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+                if (remaining <= 0.0)
+                    break;
+
+                std::optional<Solution> better = exchanges[group]->improve(current, parameters.maxRemoved, remaining);
+                if (!better || !g.expressionsSystem->validateSolution(*better))
+                    break;
+
+                current = std::move(*better);
+                improved = true;
+            }
+
+            g.polished[jobs[jobId].taskId] = true;
+
+            if (!improved)
+                continue;
+
+            size_t additions = current.getAdditions();
+            size_t seen = shared[group].load();
+            while (additions < seen && !shared[group].compare_exchange_weak(seen, additions))
+                ;
+
+            local.push_back({group, std::move(current)});
+        }
+
+        #pragma omp critical
+        results.insert(results.end(), std::make_move_iterator(local.begin()), std::make_move_iterator(local.end()));
+    }
+
+    return finalizePolish(results);
 }
 
 size_t Reducer::getGroupsCount() const {
     return groups.size();
+}
+
+size_t Reducer::getSolutionsCount(size_t group) const {
+    return groups.at(group).solutions.size();
 }
 
 size_t Reducer::getLowerBound(size_t group) const {
@@ -122,7 +184,7 @@ const std::string& Reducer::getStrategyName(size_t group) const {
     return groups.at(group).strategyName;
 }
 
-std::vector<Reducer::Job> Reducer::getJobs(const std::vector<TaskPool>& pools) const {
+std::vector<Reducer::Job> Reducer::getReduceJobs(const std::vector<TaskPool>& pools) const {
     std::vector<Job> jobs;
     for (size_t group = 0; group < pools.size(); group++)
         for (size_t taskId = 0; taskId < pools[group].size(); taskId++)
@@ -131,90 +193,14 @@ std::vector<Reducer::Job> Reducer::getJobs(const std::vector<TaskPool>& pools) c
     return jobs;
 }
 
-std::vector<double> Reducer::getWeights(const std::vector<Solution>& solutions, size_t best, double temperature, double eps) const {
-    std::vector<size_t> additions;
-    for (const Solution& solution : solutions)
-        additions.push_back(solution.getAdditions());
+std::vector<Reducer::Job> Reducer::getPolishJobs(const PolishParameters& parameters) const {
+    std::vector<Job> jobs;
 
-    std::vector<double> weights;
-    if (additions.empty())
-        return weights;
+    for (size_t group = 0; group < groups.size(); group++)
+        for (const auto& candidate : groups[group].getPolishCandidates(parameters.slack))
+            jobs.push_back({group, candidate.second});
 
-    std::unordered_map<size_t, size_t> counts;
-    for (size_t value : additions)
-        counts[value]++;
-
-    double sum = 0;
-    for (size_t value : additions) {
-        double weight = std::exp(-double(value - best) / temperature) / counts[value];
-        weights.push_back(weight);
-        sum += weight;
-    }
-
-    double uniform = 1.0 / additions.size();
-    for (double& weight : weights)
-        weight = weight / sum * (1 - eps) + uniform * eps;
-
-    return weights;
-}
-
-std::vector<Vector> Reducer::getIntermediates(const std::vector<std::vector<int>>& expressions, const Solution& solution) const {
-    std::unordered_set<Vector> targets;
-
-    for (const std::vector<int>& expression : expressions) {
-        Vector target(expression);
-
-        if (target.getSupport() >= 2)
-            targets.insert(target.getCanonized());
-    }
-
-    std::vector<Vector> vectors;
-    vectors.reserve(solution.dimension + solution.substitutions.size());
-    for (size_t i = 0; i < solution.dimension; i++)
-        vectors.emplace_back(solution.dimension, i);
-
-    std::unordered_set<Vector> seen;
-    std::vector<Vector> intermediates;
-
-    for (const Substitution& s : solution.substitutions) {
-        Vector vector = vectors[s.i] * s.ai + vectors[s.j] * s.aj;
-        vectors.push_back(vector);
-
-        if (vector.getSupport() < 2)
-            continue;
-
-        Vector canonized = vector.getCanonized();
-        if (targets.count(canonized) || !seen.insert(canonized).second)
-            continue;
-
-        intermediates.push_back(std::move(canonized));
-    }
-
-    return intermediates;
-}
-
-std::vector<Vector> Reducer::getVectors(const std::vector<Vector>& intermediates, std::mt19937& generator, size_t minRemoved, size_t maxRemoved) const {
-    std::uniform_int_distribution<size_t> distribution(minRemoved, std::max(minRemoved, maxRemoved));
-    size_t count = std::min(distribution(generator), intermediates.size());
-
-    std::vector<size_t> order(intermediates.size());
-    for (size_t i = 0; i < intermediates.size(); i++)
-        order[i] = i;
-
-    std::shuffle(order.begin(), order.end(), generator);
-
-    std::vector<bool> removed(intermediates.size(), false);
-    for (size_t i = 0; i < count; i++)
-        removed[order[i]] = true;
-
-    std::vector<Vector> vectors;
-    vectors.reserve(intermediates.size() - count);
-
-    for (size_t i = 0; i < intermediates.size(); i++)
-        if (!removed[i])
-            vectors.push_back(intermediates[i]);
-
-    return vectors;
+    return jobs;
 }
 
 Reducer::StartMode Reducer::chooseStartMode(double scratch, double substitutions, double vectors, double p) const {
@@ -242,8 +228,8 @@ Reducer::StartMode Reducer::chooseStartMode(double scratch, double substitutions
     return last;
 }
 
-std::optional<size_t> Reducer::solve(Solver& solver, const ReduceParameters& parameters, const Task& task, size_t group) const {
-    std::seed_seq sequence{task.seed, 0x5EEDu};
+std::optional<size_t> Reducer::solve(Solver& solver, const ReduceParameters& parameters, uint32_t seed, size_t group) const {
+    std::seed_seq sequence{seed, 0x5EEDu};
     std::mt19937 generator(sequence);
     std::uniform_real_distribution<double> uniform(0.0, 1.0);
 
@@ -256,36 +242,20 @@ std::optional<size_t> Reducer::solve(Solver& solver, const ReduceParameters& par
 
     StartMode mode = chooseStartMode(scratchWeight, substitutionsWeight, vectorsWeight, uniform(generator));
 
-    if (mode == StartMode::Substitutions)
-        return solveFromSubstitutions(solver, parameters, group, generator);
+    if (mode == StartMode::Substitutions) {
+        std::vector<Substitution> substitutions = groups[group].getRandomSubstitutions(generator, parameters.minAdditionsRatio, parameters.maxAdditionsRatio);
+        return solver.solve(substitutions);
+    }
 
-    if (mode == StartMode::Vectors)
-        return solveFromVectors(solver, parameters, group, generator);
+    if (mode == StartMode::Vectors) {
+        std::vector<Vector> vectors = groups[group].getVectors(generator, parameters.minRemoveVectors, parameters.maxRemoveVectors);
+        return solver.solve(vectors);
+    }
 
     return solver.solve();
 }
 
-std::optional<size_t> Reducer::solveFromSubstitutions(Solver& solver, const ReduceParameters& parameters, size_t group, std::mt19937& generator) const {
-    size_t minAdditions = groups[group].additions * parameters.minAdditionsRatio;
-    size_t maxAdditions = groups[group].additions * parameters.maxAdditionsRatio;
-
-    std::uniform_int_distribution<size_t> distribution(minAdditions, maxAdditions);
-    size_t count = distribution(generator);
-    std::vector<Substitution> substitutions = groups[group].pool.getRandomSubstitutions(generator, count);
-
-    return solver.solve(substitutions);
-}
-
-std::optional<size_t> Reducer::solveFromVectors(Solver& solver, const ReduceParameters& parameters, size_t group, std::mt19937& generator) const {
-    std::discrete_distribution<size_t> distribution(groups[group].weights.begin(), groups[group].weights.end());
-    const Solution& solution = groups[group].solutions[distribution(generator)];
-    std::vector<Vector> intermediates = getIntermediates(groups[group].expressionsSystem->getExpressions(), solution);
-    std::vector<Vector> vectors = getVectors(intermediates, generator, parameters.minRemoveVectors, parameters.maxRemoveVectors);
-
-    return solver.solve(vectors);
-}
-
-bool Reducer::finalize(const std::vector<TaskPool>& pools, const std::vector<std::optional<ReducerResult>>& best, const std::vector<std::vector<Solution>>& collected) {
+bool Reducer::finalizeReduce(const std::vector<TaskPool>& pools, const std::vector<std::optional<ReduceResult>>& best, const std::vector<std::vector<Solution>>& collected) {
     bool improved = false;
 
     for (size_t group = 0; group < groups.size(); group++) {
@@ -298,17 +268,41 @@ bool Reducer::finalize(const std::vector<TaskPool>& pools, const std::vector<std
             improved = true;
         }
 
-        g.solutions.clear();
-        if (!best[group])
-            g.solutions.push_back(g.solution);
-
         const size_t offset = g.solutions.size();
-        g.solutions.insert(g.solutions.end(), collected[group].begin(), collected[group].end());
-        g.weights = getWeights(g.solutions, g.additions);
 
-        for (size_t i = offset; i < g.solutions.size(); i++)
-            g.pool.addSolution(g.solutions[i], g.weights[i]);
+        g.add(g.solution);
+        for (const Solution& solution : collected[group])
+            g.add(solution);
+
+        g.update(offset);
     }
+
+    return improved;
+}
+
+bool Reducer::finalizePolish(const std::vector<PolishResult>& results) {
+    std::vector<size_t> from(groups.size());
+    for (size_t group = 0; group < groups.size(); group++)
+        from[group] = groups[group].solutions.size();
+
+    bool improved = false;
+
+    for (const PolishResult& result : results) {
+        Group& g = groups[result.group];
+
+        size_t additions = result.solution.getAdditions();
+        if (additions < g.additions) {
+            g.additions = additions;
+            g.solution = result.solution;
+            g.strategyName = "helper exchange";
+            improved = true;
+        }
+
+        g.add(result.solution, true);
+    }
+
+    for (size_t group = 0; group < groups.size(); group++)
+        groups[group].update(from[group]);
 
     return improved;
 }

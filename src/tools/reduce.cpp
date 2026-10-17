@@ -105,25 +105,24 @@ ReduceParameters getReduceParameters(const ArgParser& parser) {
     return parameters;
 }
 
+PolishParameters getPolishParameters(const ArgParser& parser) {
+    PolishParameters parameters;
+    parameters.maxRemoved = std::stoull(parser["--exchange-max-remove"]);
+    parameters.slack = std::stoull(parser["--exchange-slack"]);
+    parameters.maxTimeInSeconds = std::stod(parser["--exchange-max-time"]);
+
+    return parameters;
+}
+
 void printParsedArguments(const ArgParser& parser, uint32_t seed) {
     size_t threads = std::stoull(parser["--threads"]);
 
     size_t rounds = std::stoull(parser["--rounds"]);
 
-    double substitutionsRatio = std::stod(parser["--substitutions-ratio"]);
-    double vectorsRatio = std::stod(parser["--vectors-ratio"]);
-    double scratchRatio = std::max(0.0, 1.0 - substitutionsRatio - vectorsRatio);
+    ReduceParameters reduce = getReduceParameters(parser);
+    PolishParameters polish = getPolishParameters(parser);
 
-    double minAdditionsRatio = std::stod(parser["--min-additions-ratio"]);
-    double maxAdditionsRatio = std::stod(parser["--max-additions-ratio"]);
-    double minRemoveVectors = std::stod(parser["--min-remove-vectors"]);
-    double maxRemoveVectors = std::stod(parser["--max-remove-vectors"]);
-
-    if (minAdditionsRatio > maxAdditionsRatio)
-        std::swap(minAdditionsRatio, maxAdditionsRatio);
-
-    if (minRemoveVectors > maxRemoveVectors)
-        std::swap(minRemoveVectors, maxRemoveVectors);
+    double scratchRatio = std::max(0.0, 1.0 - reduce.substitutionsRatio - reduce.vectorsRatio);
 
     size_t vecIterations = std::stoull(parser["--vec-iterations"]);
     size_t cseIterations = std::stoull(parser["--cse-iterations"]);
@@ -145,9 +144,9 @@ void printParsedArguments(const ArgParser& parser, uint32_t seed) {
     std::cout << "- use CSE only on first round: " << (parser.isSet("--cse-first-round-only") ? "yes" : "no") << std::endl;
     std::cout << "- try transposing: " << (parser.isSet("--try-transpose") ? "yes" : "no") << std::endl;
     std::cout << "- bound by best: " << (parser.isSet("--bound-by-best") ? "yes" : "no") << std::endl;
-    std::cout << "- start ratios (scratch / substitutions / vectors): " << scratchRatio << " / " << substitutionsRatio << " / " << vectorsRatio << std::endl;
-    std::cout << "- additions ratios: " << minAdditionsRatio << " .. " << maxAdditionsRatio << std::endl;
-    std::cout << "- remove vectors: " << minRemoveVectors << " .. " << maxRemoveVectors << std::endl;
+    std::cout << "- start ratios (scratch / substitutions / vectors): " << scratchRatio << " / " << reduce.substitutionsRatio << " / " << reduce.vectorsRatio << std::endl;
+    std::cout << "- additions ratios: " << reduce.minAdditionsRatio << " .. " << reduce.maxAdditionsRatio << std::endl;
+    std::cout << "- remove vectors: " << reduce.minRemoveVectors << " .. " << reduce.maxRemoveVectors << std::endl;
     std::cout << std::endl;
     std::cout << "- Vector covering solver:";
     if (vecIterations > 0) {
@@ -176,6 +175,11 @@ void printParsedArguments(const ArgParser& parser, uint32_t seed) {
     }
 
     std::cout << std::endl;
+    std::cout << "Polishing:" << std::endl;
+    std::cout << "- exchange max remove: " << polish.maxRemoved << std::endl;
+    std::cout << "- exchange slack: " << polish.slack << std::endl;
+    std::cout << "- exchange max time: " << formatTimeInSeconds(polish.maxTimeInSeconds) << std::endl;
+    std::cout << std::endl;
     std::cout << "Post-processing:" << std::endl;
     std::cout << "- inline substitutions: " << (parser.isSet("--inline-substitutions") ? "yes" : "no") << std::endl;
     std::cout << "- optimize inversions: " << (parser.isSet(parser["--optimize-inversions"]) ? "yes" : "no") << std::endl;
@@ -198,7 +202,9 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
     size_t lowerBound = expressionsSystem.getAdditionsLowerBound();
     size_t rounds = std::stoull(parser["--rounds"]);
     bool needPrint = rounds > 1 && (parser.isSet("--print-rounds-stats") || parser.isSet("--print-all"));
-    ReduceParameters parameters = getReduceParameters(parser);
+
+    ReduceParameters reduceParameters = getReduceParameters(parser);
+    PolishParameters polishParameters = getPolishParameters(parser);
 
     Solution bestSolution = reducer.getSolution(0);
     size_t bestAdditions = bestSolution.getAdditions();
@@ -221,10 +227,12 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
         if (!haveTasks)
             break;
 
-        reducer.reduce(pools, parameters);
+        reducer.reduce(pools, reduceParameters);
+        reducer.polish(polishParameters);
 
         Solution solution = reducer.getSolution(0);
         size_t additions = solution.getAdditions();
+        size_t solutionsCount = reducer.getSolutionsCount(0);
 
         if (additions < bestAdditions) {
             bestSolution = solution;
@@ -236,6 +244,7 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
             SolutionTransposer transposer;
             Solution transposed = transposer.transpose(reducer.getSolution(1));
             additions = transposed.getAdditions();
+            solutionsCount += reducer.getSolutionsCount(1);
 
             if (additions < bestAdditions) {
                 bestSolution = transposed;
@@ -248,6 +257,7 @@ Solution reduce(const ExpressionsSystem& expressionsSystem, const ArgParser& par
 
         if (needPrint) {
             std::cout << "- round " << (round + 1) << ": " << bestAdditions << " additions (" << strategyName << ")";
+            std::cout << ", solutions: " << solutionsCount;
             std::cout << ", elapsed: " << formatDuration(t2 - t1);
             std::cout << std::endl;
         }
@@ -394,6 +404,11 @@ int main(int argc, char** argv) {
     parser.add("--cse-iterations", ArgType::UInt, "Number of iterations", "100");
     parser.addChoices("--cse-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
     parser.add("--cse-max-time", ArgType::Real, "Max computation time of the solver in seconds; 0 means unlimited", "0");
+
+    parser.addSection("Polishing");
+    parser.add("--exchange-max-remove", ArgType::Natural, "Maximum number of helpers removed in one exchange (0 disables polishing)", "0");
+    parser.add("--exchange-slack", ArgType::Natural, "Also polish solutions with up to this many additions above the best one", "1");
+    parser.add("--exchange-max-time", ArgType::Real, "Time limit in seconds for polishing one solution", "10");
 
     parser.addSection("Post-processing");
     parser.add("--inline-substitutions", ArgType::Flag, "Inline substitutions that occur only once");
