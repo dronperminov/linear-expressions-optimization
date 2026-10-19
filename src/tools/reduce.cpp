@@ -355,6 +355,22 @@ std::unique_ptr<ExpressionsReader> getExpressionsReader(const std::string& path)
     return std::make_unique<TxtExpressionsReader>();
 }
 
+bool createParentDirectories(const std::filesystem::path& path) {
+    std::filesystem::path parent = path.parent_path();
+    if (parent.empty())
+        return true;
+
+    std::error_code ec;
+    std::filesystem::create_directories(parent, ec);
+
+    if (ec) {
+        std::cerr << "Unable to create parent directory for \"" << path << "\"" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 std::string replaceTemplates(const std::string& path, const Solution& solution) {
     std::string additions = std::to_string(solution.getAdditions());
     std::string inversions = std::to_string(solution.getInversions());
@@ -444,6 +460,9 @@ int main(int argc, char** argv) {
     std::string inputPath = parser["--input-path"];
     std::string outputPath = parser["--output-path"];
     std::mt19937 generator(seed);
+
+    if (!createParentDirectories(outputPath))
+        return -1;
 
     try {
         std::unique_ptr<SolutionFormatter> formatter = getFormatter(outputPath, parser["--format"]);
