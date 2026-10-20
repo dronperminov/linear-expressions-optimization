@@ -182,7 +182,7 @@ void printParsedArguments(const ArgParser& parser, uint32_t seed) {
     std::cout << std::endl;
     std::cout << "Post-processing:" << std::endl;
     std::cout << "- inline substitutions: " << (parser.isSet("--inline-substitutions") ? "yes" : "no") << std::endl;
-    std::cout << "- optimize inversions: " << (parser.isSet(parser["--optimize-inversions"]) ? "yes" : "no") << std::endl;
+    std::cout << "- optimize inversions: " << (parser.isSet("--optimize-inversions") ? "yes" : "no") << std::endl;
     std::cout << "- validate solution: " << (parser.isSet("--validate") ? "yes" : "no") << std::endl;
     std::cout << std::endl;
 }
@@ -355,20 +355,18 @@ std::unique_ptr<ExpressionsReader> getExpressionsReader(const std::string& path)
     return std::make_unique<TxtExpressionsReader>();
 }
 
-bool createParentDirectories(const std::filesystem::path& path) {
+void createParentDirectories(const std::filesystem::path& path) {
     std::filesystem::path parent = path.parent_path();
     if (parent.empty())
-        return true;
+        return;
 
     std::error_code ec;
     std::filesystem::create_directories(parent, ec);
 
-    if (ec) {
-        std::cerr << "Unable to create parent directory for \"" << path << "\"" << std::endl;
-        return false;
-    }
+    if (!ec)
+        return;
 
-    return true;
+    throw std::runtime_error("Unable to create parent directory for \"" + path.string() + "\"");
 }
 
 std::string replaceTemplates(const std::string& path, const Solution& solution) {
@@ -461,9 +459,6 @@ int main(int argc, char** argv) {
     std::string outputPath = parser["--output-path"];
     std::mt19937 generator(seed);
 
-    if (!createParentDirectories(outputPath))
-        return -1;
-
     try {
         std::unique_ptr<SolutionFormatter> formatter = getFormatter(outputPath, parser["--format"]);
         std::unique_ptr<ExpressionsReader> reader = getExpressionsReader(inputPath);
@@ -503,6 +498,8 @@ int main(int argc, char** argv) {
         }
         else {
             std::string replacedPath = replaceTemplates(outputPath, solution);
+            createParentDirectories(replacedPath);
+
             std::ofstream fout(replacedPath);
             formatter->format(fout, solution);
             fout.close();
