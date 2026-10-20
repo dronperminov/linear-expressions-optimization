@@ -6,9 +6,9 @@
 
 namespace leo::presets {
 
-StrategyPool vectorCoveringDefault(const leo::vector_covering::Parameters& parameters);
-StrategyPool vectorCoveringDistance(const leo::vector_covering::Parameters& parameters);
-StrategyPool vectorCoveringAll(const leo::vector_covering::Parameters& parameters);
+StrategyPool vectorCoveringDefault(const leo::vec::Parameters& parameters);
+StrategyPool vectorCoveringDistance(const leo::vec::Parameters& parameters);
+StrategyPool vectorCoveringAll(const leo::vec::Parameters& parameters);
 
 StrategyPool cseVanilla(const leo::cse::Parameters& parameters);
 StrategyPool csePotential(const leo::cse::Parameters& parameters);

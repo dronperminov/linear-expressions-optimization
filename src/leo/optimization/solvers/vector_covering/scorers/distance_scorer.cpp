@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 DistanceScorer::DistanceScorer(double gainWeight, double tieWeight, double savingsWeight, double coverWeight, int supportSlack) : gainWeight(gainWeight), tieWeight(tieWeight), savingsWeight(savingsWeight), coverWeight(coverWeight), supportSlack(supportSlack) {
 
@@ -119,4 +119,4 @@ double DistanceScorer::getSavingScore(const std::vector<Target>& targets, const 
     return score;
 }
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

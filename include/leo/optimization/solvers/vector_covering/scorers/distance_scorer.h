@@ -9,7 +9,7 @@
 #include <leo/optimization/solvers/vector_covering/context.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 class DistanceScorer : public VectorCoveringScorer {
     struct Target {
@@ -35,4 +35,4 @@ private:
     double getSavingScore(const std::vector<Target>& targets, const Vector& vector) const;
 };
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

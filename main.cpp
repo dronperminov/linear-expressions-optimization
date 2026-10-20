@@ -98,16 +98,16 @@ void test(const ExpressionsSystem& expressionsSystem, uint32_t seed) {
     expressionsSystem.describe(std::cout);
     std::cout << std::endl;
 
-    vector_covering::Parameters vecParameters = {maxAbsValue};
+    vec::Parameters vecParameters = {maxAbsValue};
 
-    auto defaultScorer = std::make_shared<vector_covering::DefaultScorer>();
-    auto customScorer = std::make_shared<vector_covering::DefaultScorer>(1000, 100, 5, 3, 0, 0);
+    auto defaultScorer = std::make_shared<vec::DefaultScorer>();
+    auto customScorer = std::make_shared<vec::DefaultScorer>(1000, 100, 5, 3, 0, 0);
 
     auto greedy = std::make_shared<GreedySelector>();
     auto greedyAlternative = std::make_shared<GreedyAlternativeSelector>();
     auto greedyRandom = std::make_shared<GreedyRandomSelector>(0.3);
 
-    vector_covering::VectorCoveringSolver vec(expressionsSystem.getExpressions(), vecParameters, defaultScorer, greedy, seed);
+    vec::VectorCoveringSolver vec(expressionsSystem.getExpressions(), vecParameters, defaultScorer, greedy, seed);
     solve(expressionsSystem, vec, "vec: default, greedy", true);
 
     vec.setScorer(customScorer);

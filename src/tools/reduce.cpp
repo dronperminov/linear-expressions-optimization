@@ -25,7 +25,7 @@ StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSys
     if (expressionsSystem.isHorizontal())
         return StrategyPool();
 
-    leo::vector_covering::Parameters parameters;
+    vec::Parameters parameters;
     parameters.maxAbsValue = expressionsSystem.getMaxAbsValue();
     parameters.naiveFallback = false;
     parameters.removeUnused = true;
@@ -45,7 +45,7 @@ StrategyPool getVectorCoveringStrategies(const ExpressionsSystem& expressionsSys
 }
 
 StrategyPool getCommonSubexpressionStrategies(const ArgParser& parser) {
-    leo::cse::Parameters parameters;
+    cse::Parameters parameters;
     parameters.maxTimeInSeconds = std::stod(parser["--cse-max-time"]);
 
     std::string preset = parser["--cse-preset"];

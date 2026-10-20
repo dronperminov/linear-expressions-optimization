@@ -19,7 +19,7 @@
 #include <leo/optimization/solvers/vector_covering/parameters.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 class VectorCoveringSolver : public Solver {
     Parameters parameters;
@@ -83,4 +83,4 @@ private:
     bool isTimeout() const;
 };
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

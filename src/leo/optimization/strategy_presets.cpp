@@ -18,26 +18,26 @@
 
 namespace leo::presets {
 
-StrategyPool vectorCoveringDefault(const leo::vector_covering::Parameters& parameters) {
+StrategyPool vectorCoveringDefault(const leo::vec::Parameters& parameters) {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
-    std::vector<std::pair<std::string, std::shared_ptr<const vector_covering::VectorCoveringScorer>>> scorers = {
-        {"vec/1", std::make_shared<vector_covering::DefaultScorer>()},
-        {"vec/2", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0,  0.0, 0.0, 0.0)},
-        {"vec/3", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0,  0.0, 0.0, 5.0)},
-        {"vec/4", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0,  0.1, 0.0, 0.0)},
-        {"vec/5", std::make_shared<vector_covering::DefaultScorer>(1000.0,  30.0,  0.0,  0.1, 0.2, 0.5)},
-        {"vec/6", std::make_shared<vector_covering::DefaultScorer>(1000.0,  30.0,  0.0,  0.1, 0.5, 5.0)},
-        {"vec/7", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0,  0.0, 0.01, 0.0, 0.5)},
-        {"vec/8", std::make_shared<vector_covering::DefaultScorer>(1000.0, 100.0, 0.01,  0.1, 0.1, 0.0)},
-        {"vec/9", std::make_shared<vector_covering::DefaultScorer>(1000.0,  30.0, 0.01, 0.01, 0.0, 0.0)}
+    std::vector<std::pair<std::string, std::shared_ptr<const vec::VectorCoveringScorer>>> scorers = {
+        {"vec/1", std::make_shared<vec::DefaultScorer>()},
+        {"vec/2", std::make_shared<vec::DefaultScorer>(1000.0, 100.0,  0.0,  0.0, 0.0, 0.0)},
+        {"vec/3", std::make_shared<vec::DefaultScorer>(1000.0, 100.0,  0.0,  0.0, 0.0, 5.0)},
+        {"vec/4", std::make_shared<vec::DefaultScorer>(1000.0, 100.0,  0.0,  0.1, 0.0, 0.0)},
+        {"vec/5", std::make_shared<vec::DefaultScorer>(1000.0,  30.0,  0.0,  0.1, 0.2, 0.5)},
+        {"vec/6", std::make_shared<vec::DefaultScorer>(1000.0,  30.0,  0.0,  0.1, 0.5, 5.0)},
+        {"vec/7", std::make_shared<vec::DefaultScorer>(1000.0, 100.0,  0.0, 0.01, 0.0, 0.5)},
+        {"vec/8", std::make_shared<vec::DefaultScorer>(1000.0, 100.0, 0.01,  0.1, 0.1, 0.0)},
+        {"vec/9", std::make_shared<vec::DefaultScorer>(1000.0,  30.0, 0.01, 0.01, 0.0, 0.0)}
     };
 
     for (const auto& scorer : scorers) {
         strategies.add(scorer.first, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer.second, selector, seed);
+            return std::make_unique<vec::VectorCoveringSolver>(expressions, parameters, scorer.second, selector, seed);
         });
     }
 
@@ -57,33 +57,33 @@ StrategyPool vectorCoveringDefault(const leo::vector_covering::Parameters& param
         double distance = distanceWeights[generator() % distanceWeights.size()];
         double savings = savingsWeights[generator() % savingsWeights.size()];
 
-        auto scorer = std::make_shared<vector_covering::DefaultScorer>(cover, oneStep, hamming, matches, distance, savings);
-        return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer, selector, seed);
+        auto scorer = std::make_shared<vec::DefaultScorer>(cover, oneStep, hamming, matches, distance, savings);
+        return std::make_unique<vec::VectorCoveringSolver>(expressions, parameters, scorer, selector, seed);
     });
 
     return strategies;
 }
 
-StrategyPool vectorCoveringDistance(const leo::vector_covering::Parameters& parameters) {
+StrategyPool vectorCoveringDistance(const leo::vec::Parameters& parameters) {
     StrategyPool strategies;
 
     auto selector = std::make_shared<GreedyAlternativeSelector>();
 
-    std::vector<std::pair<std::string, std::shared_ptr<const vector_covering::VectorCoveringScorer>>> scorers = {
-        {"vec/dst1", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0,  0.0, 10.0, 2)},
-        {"vec/dst2", std::make_shared<vector_covering::DistanceScorer>(1000.0, 1.0, 0.01, 10.0, 2)}
+    std::vector<std::pair<std::string, std::shared_ptr<const vec::VectorCoveringScorer>>> scorers = {
+        {"vec/dst1", std::make_shared<vec::DistanceScorer>(1000.0, 1.0,  0.0, 10.0, 2)},
+        {"vec/dst2", std::make_shared<vec::DistanceScorer>(1000.0, 1.0, 0.01, 10.0, 2)}
     };
 
     for (const auto& scorer : scorers) {
         strategies.add(scorer.first, [=](const std::vector<std::vector<int>>& expressions, uint32_t seed) {
-            return std::make_unique<vector_covering::VectorCoveringSolver>(expressions, parameters, scorer.second, selector, seed);
+            return std::make_unique<vec::VectorCoveringSolver>(expressions, parameters, scorer.second, selector, seed);
         });
     }
 
     return strategies;
 }
 
-StrategyPool vectorCoveringAll(const leo::vector_covering::Parameters& parameters) {
+StrategyPool vectorCoveringAll(const leo::vec::Parameters& parameters) {
     StrategyPool strategies;
     strategies.add(vectorCoveringDistance(parameters));
     strategies.add(vectorCoveringDefault(parameters));

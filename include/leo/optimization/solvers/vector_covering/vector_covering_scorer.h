@@ -5,7 +5,7 @@
 #include <leo/optimization/solvers/vector_covering/candidate.h>
 #include <leo/optimization/solvers/vector_covering/context.h>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 class VectorCoveringScorer {
 public:
@@ -14,4 +14,4 @@ public:
     virtual ~VectorCoveringScorer() = default;
 };
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

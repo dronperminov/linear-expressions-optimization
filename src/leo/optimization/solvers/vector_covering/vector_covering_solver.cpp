@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const Parameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
     setParameters(parameters);
@@ -405,4 +405,4 @@ bool VectorCoveringSolver::isTimeout() const {
     return std::chrono::steady_clock::now() > deadline;
 }
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

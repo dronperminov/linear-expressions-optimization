@@ -3,7 +3,7 @@
 #include <leo/entities/substitution.h>
 #include <leo/entities/vector.h>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 struct Candidate {
     Substitution step;
@@ -12,4 +12,4 @@ struct Candidate {
     uint64_t fingerprint;
 };
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

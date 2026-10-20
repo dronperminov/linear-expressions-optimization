@@ -6,7 +6,7 @@
 
 #include <leo/entities/vector.h>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 struct Context {
     const std::unordered_set<Vector>& uncovered;
@@ -14,4 +14,4 @@ struct Context {
     const std::vector<uint64_t>& fingerprints;
 };
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

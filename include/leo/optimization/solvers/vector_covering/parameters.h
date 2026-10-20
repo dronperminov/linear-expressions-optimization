@@ -1,6 +1,6 @@
 #pragma once
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 struct Parameters {
     int maxAbsValue;
@@ -11,4 +11,4 @@ struct Parameters {
     double maxTimeInSeconds = 0.0;
 };
 
-} // namespace leo::vector_covering
+} // namespace leo::vec
