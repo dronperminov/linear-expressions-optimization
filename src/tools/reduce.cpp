@@ -158,7 +158,7 @@ void printParsedArguments(const ArgParser& parser, uint32_t seed) {
         std::cout << "  - max time: " << formatTimeInSeconds(vecMaxTime) << std::endl;
     }
     else {
-        std::cout << " not used" << std::endl;
+        std::cout << " disabled" << std::endl;
     }
 
     std::cout << std::endl;
@@ -171,14 +171,21 @@ void printParsedArguments(const ArgParser& parser, uint32_t seed) {
         std::cout << "  - max time: " << formatTimeInSeconds(cseMaxTime) << std::endl;
     }
     else {
-        std::cout << " not used" << std::endl;
+        std::cout << " disabled" << std::endl;
     }
 
     std::cout << std::endl;
-    std::cout << "Polishing:" << std::endl;
-    std::cout << "- exchange max remove: " << polish.maxRemoved << std::endl;
-    std::cout << "- exchange slack: " << polish.slack << std::endl;
-    std::cout << "- exchange max time: " << formatTimeInSeconds(polish.maxTimeInSeconds) << std::endl;
+    std::cout << "Polishing:";
+    if (polish.maxRemoved > 0) {
+        std::cout << std::endl;
+        std::cout << "- exchange max remove: " << polish.maxRemoved << std::endl;
+        std::cout << "- exchange slack: " << polish.slack << std::endl;
+        std::cout << "- exchange max time: " << formatTimeInSeconds(polish.maxTimeInSeconds) << std::endl;
+    }
+    else {
+        std::cout << " disabled" << std::endl;
+    }
+
     std::cout << std::endl;
     std::cout << "Post-processing:" << std::endl;
     std::cout << "- inline substitutions: " << (parser.isSet("--inline-substitutions") ? "yes" : "no") << std::endl;
@@ -399,23 +406,23 @@ int main(int argc, char** argv) {
     parser.add("--bound-by-best", "-b", ArgType::Flag, "Stop any solver that cannot beat the best solution found so far");
     parser.add("--try-transpose", "-T", ArgType::Flag, "Additionally try solving the transposed system, then transpose the solution back");
     parser.add("--cse-first-round-only", ArgType::Flag, "Run CSE solvers only in the first round, later rounds use only vector covering solvers");
-    parser.add("--substitutions-ratio", ArgType::Ratio, "Share of tasks that start from substitutions sampled from earlier solutions (rounds after the first)", "0.5");
-    parser.add("--vectors-ratio", ArgType::Ratio, "Share of tasks that start from the vectors of an earlier solution with a few removed (rounds after the first)", "0.5");
+    parser.add("--substitutions-ratio", ArgType::Ratio, "Share of tasks that start from substitutions sampled from earlier solutions (rounds after the first)", "0.25");
+    parser.add("--vectors-ratio", ArgType::Ratio, "Share of tasks that start from the vectors of an earlier solution with a few removed (rounds after the first)", "0.7");
     parser.add("--min-additions-ratio", ArgType::Ratio, "Minimum length of the starting substitutions, as a share of the best solution's additions", "0.1");
     parser.add("--max-additions-ratio", ArgType::Ratio, "Maximum length of the starting substitutions, as a share of the best solution's additions", "0.5");
     parser.add("--min-remove-vectors", ArgType::Natural, "Minimum number of intermediate vectors removed from the starting solution", "1");
     parser.add("--max-remove-vectors", ArgType::Natural, "Maximum number of intermediate vectors removed from the starting solution", "8");
 
     parser.addSection("Vector covering solver");
+    parser.add("--vec-iterations", ArgType::UInt, "Number of iterations (0 disables solver)", "10");
     parser.addChoices("--vec-preset", ArgType::String, "Strategies preset", {"default", "distance", "all"}, "distance");
-    parser.add("--vec-iterations", ArgType::UInt, "Number of iterations", "10");
     parser.addChoices("--vec-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
     parser.add("--vec-add-target-pairs", ArgType::Flag, "Precompute target vectors reachable with one addition or subtraction (xi +/- xj)");
     parser.add("--vec-max-time", ArgType::Real, "Max computation time of the solver in seconds; 0 means unlimited", "0");
 
     parser.addSection("Common subexpression (CSE) solver");
+    parser.add("--cse-iterations", ArgType::UInt, "Number of iterations (0 disables solver)", "100");
     parser.addChoices("--cse-preset", ArgType::String, "Strategies preset", {"vanilla", "potential", "intersections", "all"}, "all");
-    parser.add("--cse-iterations", ArgType::UInt, "Number of iterations", "100");
     parser.addChoices("--cse-sampling", ArgType::String, "\"sample\": random strategy per iteration; \"each\": every strategy, all iterations", {"sample", "each"}, "sample");
     parser.add("--cse-max-time", ArgType::Real, "Max computation time of the solver in seconds; 0 means unlimited", "0");
 

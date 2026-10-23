@@ -45,7 +45,9 @@ Create an `input.txt` file. The first line is the number of expressions and the 
 **Run with the recommended parameters:**
 
 ```bash
-./reduce -i input.txt -o output.txt -T -b -p -r 25 --vec-iterations 100 --cse-iterations 50 --cse-first-round-only --validate --vectors-ratio 0.7 --substitutions-ratio 0.25 --exchange-max-remove 2
+./reduce -i input.txt -o output.json -T -b -p -r 25 --validate \
+         --vec-iterations 100 --cse-iterations 50 --cse-first-round-only \
+         --exchange-max-remove 2 --inline-substitutions --optimize-inversions
 ```
 
 | Option                       | Meaning                                                                                                             |
@@ -54,13 +56,13 @@ Create an `input.txt` file. The first line is the number of expressions and the 
 | `-b`                         | stop solvers that can no longer beat the best solution found so far                                                 |
 | `-p`                         | print all diagnostics (arguments, system statistics, per-round results)                                             |
 | `-r 25`                      | run 25 optimization rounds                                                                                          |
+| `--validate`                 | independently verify the final solution                                                                             |
 | `--vec-iterations 100`       | 100 vector covering solver runs per round                                                                           |
 | `--cse-iterations 50`        | 50 CSE solver runs per round                                                                                        |
 | `--cse-first-round-only`     | run CSE solver only in the first round                                                                              |
-| `--vectors-ratio 0.7`        | 70% of tasks in later rounds start from the vectors of earlier solutions                                            |
-| `--substitutions-ratio 0.25` | 25% of tasks start from a chain of substitutions taken from earlier solutions (the remaining 5% start from scratch) |
 | `--exchange-max-remove 2`    | enable polishing, removing up to 2 helpers at a time                                                                |
-| `--validate`                 | independently verify the final solution                                                                             |
+| `--inline-substitutions`     | inline substitutions that are used exactly once                                                                     |
+| `--optimize-inversions`      | minimize the number of sign inversions with simulated annealing                                                     |
 
 ## Features
 
@@ -324,8 +326,8 @@ Polishing runs after every round, and every solution is polished once. Related o
 | `--bound-by-best`        | `-b`  |         | stop solvers that cannot beat the best result so far       |
 | `--try-transpose`        | `-T`  |         | also solve the transposed system                           |
 | `--cse-first-round-only` |       |         | run CSE in the first round only                            |
-| `--substitutions-ratio`  |       | `0.5`   | share of tasks starting from substitutions                 |
-| `--vectors-ratio`        |       | `0.5`   | share of tasks starting from vectors                       |
+| `--substitutions-ratio`  |       | `0.25`  | share of tasks starting from substitutions                 |
+| `--vectors-ratio`        |       | `0.7`   | share of tasks starting from vectors                       |
 | `--min-additions-ratio`  |       | `0.1`   | minimum starting chain length (share of the best solution) |
 | `--max-additions-ratio`  |       | `0.5`   | maximum starting chain length (share of the best solution) |
 | `--min-remove-vectors`   |       | `1`     | minimum number of removed intermediate vectors             |
@@ -668,8 +670,8 @@ public:
     void score(const std::vector<leo::cse::Subexpression>& subexpressions, const leo::cse::Context& context, std::vector<double>& scores) const override {
         scores.resize(subexpressions.size());
 
-        for (size_t k = 0; k < subexpressions.size(); k++)
-            scores[k] = subexpressions[k].rows.size();
+        for (size_t i = 0; i < subexpressions.size(); i++)
+            scores[i] = subexpressions[i].rows.size();
     }
 };
 ```
