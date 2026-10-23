@@ -6,7 +6,7 @@
 #include <leo/optimization/solvers/vector_covering/context.h>
 #include <leo/optimization/solvers/vector_covering/vector_covering_scorer.h>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 class DefaultScorer : public VectorCoveringScorer {
     double coverWeight;
@@ -24,4 +24,4 @@ private:
     void addOneStepScores(const std::vector<Candidate>& candidates, const Context& context, std::vector<double>& scores) const;
 };
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

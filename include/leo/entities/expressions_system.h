@@ -2,8 +2,10 @@
 
 #include <cstddef>
 #include <ostream>
+#include <unordered_set>
 #include <vector>
 
+#include <leo/entities/vector.h>
 #include <leo/entities/solution.h>
 
 namespace leo {
@@ -36,7 +38,10 @@ public:
 
     void describe(std::ostream& os) const;
 private:
-    size_t getAdditionsLowerBound(const std::vector<std::vector<int>>& expressions) const;
+    size_t getAdditionsLowerBound(const std::vector<std::vector<int>>& matrix) const;
+    std::unordered_set<Vector> getUniqueTargets(const std::vector<std::vector<int>>& matrix) const;
+    size_t getMaxSupport(const std::unordered_set<Vector>& vectors) const;
+    bool coverTargets(std::unordered_set<Vector>& targets, size_t variables) const;
 };
 
 } // namespace leo

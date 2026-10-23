@@ -2,10 +2,7 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <unordered_set>
 
-#include <leo/entities/solution.h>
-#include <leo/entities/vector.h>
 #include <leo/utils/solution_validator.h>
 
 namespace leo {
@@ -118,18 +115,70 @@ void ExpressionsSystem::describe(std::ostream& os) const {
     os << "- lower bound: " << getAdditionsLowerBound() << std::endl;
 }
 
-size_t ExpressionsSystem::getAdditionsLowerBound(const std::vector<std::vector<int>>& expressions) const {
+size_t ExpressionsSystem::getAdditionsLowerBound(const std::vector<std::vector<int>>& matrix) const {
+    if (matrix.empty())
+        return 0;
+
+    std::unordered_set<Vector> targets = getUniqueTargets(matrix);
+    size_t maxSupport = getMaxSupport(targets);
+
+    size_t bound = targets.size();
+    if (!coverTargets(targets, matrix[0].size()))
+        bound++;
+
+    if (maxSupport > 0)
+        bound = std::max(bound, maxSupport - 1);
+
+    return bound;
+}
+
+std::unordered_set<Vector> ExpressionsSystem::getUniqueTargets(const std::vector<std::vector<int>>& matrix) const {
     std::unordered_set<Vector> unique;
 
-    for (const std::vector<int>& expression : expressions) {
-        Vector vector(expression);
-        vector.canonize();
+    for (const std::vector<int>& row : matrix) {
+        Vector vector(row);
 
-        if (vector.getSupport() > 1)
+        if (vector.getSupport() > 1) {
+            vector.canonize();
             unique.insert(vector);
+        }
     }
 
-    return unique.size();
+    return unique;
+}
+
+size_t ExpressionsSystem::getMaxSupport(const std::unordered_set<Vector>& vectors) const {
+    size_t maxSupport = 0;
+    for (const Vector& vector : vectors)
+        maxSupport = std::max(maxSupport, vector.getSupport());
+
+    return maxSupport;
+}
+
+bool ExpressionsSystem::coverTargets(std::unordered_set<Vector>& targets, size_t variables) const {
+    std::vector<Vector> vectors;
+    for (size_t i = 0; i < variables; i++)
+        vectors.emplace_back(variables, i);
+
+    for (size_t i = 0; i < vectors.size() && !targets.empty(); i++) {
+        for (size_t j = 0; j <= i; j++) {
+            for (int sign : {1, -1}) {
+                if (i == j && sign == -1)
+                    continue;
+
+                Vector vector = vectors[i].addScaled(vectors[j], sign);
+
+                auto it = targets.find(vector.getCanonized());
+                if (it == targets.end())
+                    continue;
+
+                vectors.push_back(*it);
+                targets.erase(it);
+            }
+        }
+    }
+
+    return targets.empty();
 }
 
 } // namespace leo

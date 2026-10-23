@@ -20,7 +20,15 @@ bool Solver::canStartFromSubstitutions() const {
     return false;
 }
 
+bool Solver::canStartFromVectors() const {
+    return false;
+}
+
 std::optional<size_t> Solver::solve(const std::vector<Substitution>& substitutions) {
+    return std::nullopt;
+}
+
+std::optional<size_t> Solver::solve(const std::vector<Vector>& seeds) {
     return std::nullopt;
 }
 

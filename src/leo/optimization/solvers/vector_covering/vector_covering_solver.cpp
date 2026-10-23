@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 VectorCoveringSolver::VectorCoveringSolver(const std::vector<std::vector<int>>& expressions, const Parameters& parameters, std::shared_ptr<const VectorCoveringScorer> scorer, std::shared_ptr<const ScoreSelector> selector, uint32_t seed) : Solver(expressions), generator(seed) {
     setParameters(parameters);
@@ -38,7 +38,12 @@ bool VectorCoveringSolver::canStartFromSubstitutions() const {
     return true;
 }
 
+bool VectorCoveringSolver::canStartFromVectors() const {
+    return true;
+}
+
 std::optional<size_t> VectorCoveringSolver::solve() {
+    seeded = false;
     initializeDeadline();
     initialize();
 
@@ -49,6 +54,7 @@ std::optional<size_t> VectorCoveringSolver::solve() {
 }
 
 std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution>& substitutions) {
+    seeded = false;
     initializeDeadline();
     initialize();
 
@@ -62,11 +68,33 @@ std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Substitution
         if (pool.find(canonized) != pool.end())
             throw std::invalid_argument("VectorCoveringSolver::solve: substitution produces existing vector");
 
-        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized});
+        useCandidate({{s.i, s.j, s.ai, s.aj}, vector, canonized, canonized.getFingerprint()});
     }
 
     if (parameters.addTargetPairs)
         addTargetPairs();
+
+    return build();
+}
+
+std::optional<size_t> VectorCoveringSolver::solve(const std::vector<Vector>& seeds) {
+    seeded = true;
+    initializeDeadline();
+    initialize();
+
+    for (const Vector& seed : seeds) {
+        if (seed.getDimension() != dimension)
+            throw std::invalid_argument("VectorCoveringSolver::solve: seed dimension does not match the system dimension");
+
+        if (seed.getSupport() < 2)
+            continue;
+
+        Vector canonized = seed.getCanonized();
+        if (targets.find(canonized) != targets.end())
+            continue;
+
+        wanted.insert(canonized);
+    }
 
     return build();
 }
@@ -116,6 +144,7 @@ void VectorCoveringSolver::initialize() {
     uncovered.clear();
     pool.clear();
     vectors.clear();
+    fingerprints.clear();
     steps.clear();
 
     used.clear();
@@ -127,8 +156,12 @@ void VectorCoveringSolver::initialize() {
     for (size_t i = 0; i < dimension; i++) {
         Vector basis(dimension, i);
         pool[basis.getCanonized()] = i;
+        fingerprints.emplace_back(basis.getFingerprint());
         vectors.emplace_back(basis);
     }
+
+    wanted.clear();
+    forced.clear();
 
     solved = false;
 }
@@ -174,7 +207,14 @@ void VectorCoveringSolver::addCandidate(size_t i, size_t j, int sign) {
         return;
 
     unique.insert(canonized);
-    candidates.push_back({{i, j, 1, sign}, vector, canonized});
+    Candidate candidate{{i, j, 1, sign}, vector, canonized, canonized.getFingerprint()};
+
+    if (seeded && (wanted.count(canonized) || uncovered.count(canonized))) {
+        forced.push_back(std::move(candidate));
+    }
+    else {
+        candidates.push_back(std::move(candidate));
+    }
 }
 
 void VectorCoveringSolver::useCandidate(const Candidate& candidate) {
@@ -182,6 +222,7 @@ void VectorCoveringSolver::useCandidate(const Candidate& candidate) {
 
     pool[candidate.canonized] = index;
     vectors.push_back(candidate.vector);
+    fingerprints.push_back(candidate.fingerprint);
     steps.push_back(candidate.step);
     used.push_back(false);
 
@@ -203,16 +244,35 @@ void VectorCoveringSolver::addTargetPairs() {
         Vector vector = vectors[i] * target[i] + vectors[j] * target[j];
         Vector canonized = vector.getCanonized();
 
-        useCandidate({{i, j, target[i], target[j]}, vector, canonized});
+        useCandidate({{i, j, target[i], target[j]}, vector, canonized, canonized.getFingerprint()});
+    }
+}
+
+void VectorCoveringSolver::addForced() {
+    while (!forced.empty()) {
+        Candidate candidate = std::move(forced.back());
+        forced.pop_back();
+
+        wanted.erase(candidate.canonized);
+        useCandidate(candidate);
+
+        if (uncovered.empty()) {
+            forced.clear();
+            return;
+        }
+
+        updateCandidates();
     }
 }
 
 std::optional<size_t> VectorCoveringSolver::build() {
-    if (!uncovered.empty())
+    if (!uncovered.empty()) {
         initializeCandidates();
+        addForced();
+    }
 
-    while (!uncovered.empty() && !isBounded() && !isTimeout()) {
-        scorer->score(candidates, {uncovered, vectors}, scores);
+    while (!uncovered.empty() && !candidates.empty() && !isBounded() && !isTimeout()) {
+        scorer->score(candidates, {uncovered, vectors, fingerprints}, scores);
         size_t index = selector->selectIndex(scores, generator);
         useCandidate(candidates[index]);
 
@@ -220,11 +280,14 @@ std::optional<size_t> VectorCoveringSolver::build() {
             updateCandidates();
             candidates[index] = candidates.back();
             candidates.pop_back();
+            addForced();
         }
     }
 
     candidates.clear();
+    forced.clear();
     unique.clear();
+    fingerprints.clear();
 
     if (!uncovered.empty()) {
         if (parameters.naiveFallback)
@@ -332,7 +395,7 @@ void VectorCoveringSolver::removeUnused() {
 }
 
 bool VectorCoveringSolver::isBounded() const {
-    if (parameters.removeUnused)
+    if (parameters.ignoreUnusedInBound)
         return usedCount + uncovered.size() > bound;
 
     return steps.size() + uncovered.size() > bound;
@@ -342,4 +405,4 @@ bool VectorCoveringSolver::isTimeout() const {
     return std::chrono::steady_clock::now() > deadline;
 }
 
-} // namespace leo::vector_covering
+} // namespace leo::vec
