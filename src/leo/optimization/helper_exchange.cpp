@@ -12,9 +12,11 @@ HelperExchange::HelperExchange(const HelperPool& pool) : pool(pool), dimension(p
     for (size_t out = dimension; out < count; out++) {
         for (const Substitution& s : pool.getSubstitutions(out)) {
             size_t id = edges.size();
+
             edges.push_back({out, s.i, s.j, s.ai, s.aj});
             byOut[out].push_back(id);
             byParent[s.i].push_back(id);
+
             if (s.j != s.i)
                 byParent[s.j].push_back(id);
         }
@@ -25,9 +27,12 @@ std::optional<Solution> HelperExchange::improve(const Solution& solution, size_t
     if (solution.dimension != dimension)
         return std::nullopt;
 
+    deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(seconds));
+
     std::vector<Vector> vectors;
     for (size_t i = 0; i < dimension; i++)
         vectors.emplace_back(dimension, i);
+
     for (const Substitution& s : solution.substitutions)
         vectors.push_back(vectors[s.i] * s.ai + vectors[s.j] * s.aj);
 
@@ -35,14 +40,13 @@ std::optional<Solution> HelperExchange::improve(const Solution& solution, size_t
         return std::nullopt;
 
     reset({});
+
     if (!done())
         return std::nullopt;
 
     std::vector<size_t> all(count - dimension);
     std::iota(all.begin(), all.end(), dimension);
     candidates = collect(all, order.size());
-
-    deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(seconds));
 
     if (!search(maxRemoved))
         return std::nullopt;
@@ -54,13 +58,13 @@ bool HelperExchange::load(const Solution& solution, const std::vector<Vector>& v
     required.clear();
     helpers.clear();
 
-    base.assign(count, 0);
-    isHelper.assign(count, 0);
+    base.assign(count, false);
+    isHelper.assign(count, false);
     seen.assign(count, 0);
     stamp = 0;
 
     for (size_t i = 0; i < dimension; i++)
-        base[i] = 1;
+        base[i] = true;
 
     for (const std::vector<Term>& expression : solution.expressions) {
         for (const Term& term : expression) {
@@ -73,14 +77,14 @@ bool HelperExchange::load(const Solution& solution, const std::vector<Vector>& v
                 return false;
 
             if (!base[*index]) {
-                base[*index] = 1;
+                base[*index] = true;
                 required.push_back(*index);
             }
         }
     }
 
-    for (size_t k = dimension; k < vectors.size(); k++) {
-        Vector canonized = vectors[k].getCanonized();
+    for (size_t i = dimension; i < vectors.size(); i++) {
+        Vector canonized = vectors[i].getCanonized();
         if (canonized.getSupport() < 2)
             continue;
 
@@ -89,8 +93,8 @@ bool HelperExchange::load(const Solution& solution, const std::vector<Vector>& v
             return false;
 
         if (!base[*index]) {
-            base[*index] = 1;
-            isHelper[*index] = 1;
+            base[*index] = true;
+            isHelper[*index] = true;
             helpers.push_back(*index);
         }
     }
@@ -102,7 +106,7 @@ bool HelperExchange::isReady(size_t o) const {
     return producedBy[o] != NOT_READY;
 }
 
-bool HelperExchange::expired() const {
+bool HelperExchange::isTimeout() const {
     return std::chrono::steady_clock::now() > deadline;
 }
 
@@ -117,7 +121,7 @@ bool HelperExchange::done() const {
 void HelperExchange::reset(const std::vector<size_t>& removed) {
     allowed = base;
     for (size_t h : removed)
-        allowed[h] = 0;
+        allowed[h] = false;
 
     producedBy.assign(count, NOT_READY);
     order.clear();
@@ -133,22 +137,24 @@ void HelperExchange::reset(const std::vector<size_t>& removed) {
 void HelperExchange::grow(size_t from) {
     for (size_t cursor = from; cursor < order.size(); cursor++) {
         for (size_t id : byParent[order[cursor]]) {
-            const Edge& e = edges[id];
-            if (!allowed[e.out] || isReady(e.out) || !isReady(e.a) || !isReady(e.b))
+            const Edge& edge = edges[id];
+
+            if (!allowed[edge.out] || isReady(edge.out) || !isReady(edge.i) || !isReady(edge.j))
                 continue;
 
-            producedBy[e.out] = int(id);
-            order.push_back(e.out);
+            producedBy[edge.out] = int(id);
+            order.push_back(edge.out);
         }
     }
 }
 
 void HelperExchange::add(size_t h) {
-    allowed[h] = 1;
+    allowed[h] = true;
 
     for (size_t id : byOut[h]) {
-        const Edge& e = edges[id];
-        if (isReady(e.a) && isReady(e.b)) {
+        const Edge& edge = edges[id];
+
+        if (isReady(edge.i) && isReady(edge.j)) {
             producedBy[h] = int(id);
             order.push_back(h);
             grow(order.size() - 1);
@@ -163,7 +169,7 @@ void HelperExchange::undo(size_t mark, size_t h) {
         order.pop_back();
     }
 
-    allowed[h] = 0;
+    allowed[h] = false;
 }
 
 std::vector<size_t> HelperExchange::collect(const std::vector<size_t>& previous, size_t from) {
@@ -176,7 +182,7 @@ std::vector<size_t> HelperExchange::collect(const std::vector<size_t>& previous,
 
         seen[o] = stamp;
         for (size_t id : byOut[o]) {
-            if (isReady(edges[id].a) && isReady(edges[id].b)) {
+            if (isReady(edges[id].i) && isReady(edges[id].j)) {
                 result.push_back(o);
                 return;
             }
@@ -186,8 +192,8 @@ std::vector<size_t> HelperExchange::collect(const std::vector<size_t>& previous,
     for (size_t o : previous)
         consider(o);
 
-    for (size_t k = from; k < order.size(); k++)
-        for (size_t id : byParent[order[k]])
+    for (size_t i = from; i < order.size(); i++)
+        for (size_t id : byParent[order[i]])
             consider(edges[id].out);
 
     return result;
@@ -208,7 +214,7 @@ bool HelperExchange::chooseRemoved(size_t r, size_t start, std::vector<size_t>& 
         return tryRemoved(removed);
 
     for (size_t i = start; i < helpers.size(); i++) {
-        if (expired())
+        if (isTimeout())
             return false;
 
         removed.push_back(helpers[i]);
@@ -243,7 +249,7 @@ bool HelperExchange::insert(size_t budget, const std::vector<size_t>& viable) {
         return done();
 
     for (size_t h : viable) {
-        if (expired())
+        if (isTimeout())
             return false;
 
         size_t mark = order.size();
@@ -263,7 +269,7 @@ bool HelperExchange::insert(size_t budget, const std::vector<size_t>& viable) {
 }
 
 std::optional<Solution> HelperExchange::build(const Solution& old, const std::vector<Vector>& oldVectors) const {
-    std::vector<char> needed(count, 0);
+    std::vector<bool> needed(count, false);
     std::vector<size_t> stack = required;
 
     while (!stack.empty()) {
@@ -273,10 +279,10 @@ std::optional<Solution> HelperExchange::build(const Solution& old, const std::ve
         if (o < dimension || needed[o])
             continue;
 
-        needed[o] = 1;
-        const Edge& e = edges[producedBy[o]];
-        stack.push_back(e.a);
-        stack.push_back(e.b);
+        needed[o] = true;
+        const Edge& edge = edges[producedBy[o]];
+        stack.push_back(edge.i);
+        stack.push_back(edge.j);
     }
 
     const size_t NONE = std::numeric_limits<size_t>::max();
@@ -290,9 +296,9 @@ std::optional<Solution> HelperExchange::build(const Solution& old, const std::ve
         if (o < dimension || !needed[o])
             continue;
 
-        const Edge& e = edges[producedBy[o]];
+        const Edge& edge = edges[producedBy[o]];
         index[o] = dimension + result.substitutions.size();
-        result.substitutions.push_back({index[e.a], index[e.b], e.sa, e.sb});
+        result.substitutions.push_back({index[edge.i], index[edge.j], edge.ai, edge.aj});
     }
 
     for (const std::vector<Term>& expression : old.expressions) {

@@ -18,10 +18,10 @@ class HelperExchange {
 
     struct Edge {
         size_t out;
-        size_t a;
-        size_t b;
-        int sa;
-        int sb;
+        size_t i;
+        size_t j;
+        int ai;
+        int aj;
     };
 
     const HelperPool& pool;
@@ -51,7 +51,7 @@ private:
     bool load(const Solution& solution, const std::vector<Vector>& vectors);
 
     bool isReady(size_t o) const;
-    bool expired() const;
+    bool isTimeout() const;
     bool done() const;
 
     void reset(const std::vector<size_t>& removed);
