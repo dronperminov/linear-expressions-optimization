@@ -614,12 +614,12 @@ substitutes the chosen pair as a new variable. Scorers:
 
 **Vector covering (`vec::VectorCoveringSolver`).** Every expression is a vector. The solver maintains the set of vectors already built and the set of still
 uncovered targets, and at each step adds a new vector as a `xi ± xj` combination of two built ones until all targets are covered. Unlike CSE, it can build
-intermediate vectors that are not common subexpressions of the original expressions. It is similar in spirit to the Boyer–Peralta algorithm. Scorers:
+intermediate vectors that are not common subexpressions of the original expressions. It is similar in spirit to the Boyar-Peralta algorithm. Scorers:
 
 | Scorer                | Heuristic                                                                                             |
 |-----------------------|-------------------------------------------------------------------------------------------------------|
 | `vec::DefaultScorer`  | looks one step ahead and uses several similarity measures between vectors (weights are configurable)  |
-| `vec::DistanceScorer` | estimates distances to the targets two steps ahead; closest to Boyer–Peralta and generally works best |
+| `vec::DistanceScorer` | estimates distances to the targets two steps ahead; closest to Boyar-Peralta and generally works best |
 
 The vector covering solver can additionally start from given substitutions (`solve(const std::vector<Substitution>&)`) or given vectors
 (`solve(const std::vector<Vector>&)`), which is the basis of multi-round optimization. A given vector is built as soon as it can be obtained with a single
