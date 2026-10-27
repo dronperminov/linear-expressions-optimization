@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-namespace leo::vector_covering {
+namespace leo::vec {
 
 DefaultScorer::DefaultScorer() {
     coverWeight = 10000.0;
@@ -78,4 +78,4 @@ void DefaultScorer::addOneStepScores(const std::vector<Candidate>& candidates, c
     }
 }
 
-} // namespace leo::vector_covering
+} // namespace leo::vec

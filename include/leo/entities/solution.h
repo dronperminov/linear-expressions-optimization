@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include <leo/entities/substitution.h>
@@ -15,6 +16,7 @@ struct Solution {
 
     size_t getAdditions() const;
     size_t getInversions() const;
+    uint64_t getSignature() const;
 };
 
 } // namespace leo

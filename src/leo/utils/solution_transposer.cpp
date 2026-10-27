@@ -119,7 +119,7 @@ std::vector<std::vector<Term>> SolutionTransposer::getExpressions(const std::vec
         Vector target(dimensionT);
 
         for (size_t j = 0; j < dimensionT; j++)
-            target[j] = outputs[j][i];
+            target.set(j, outputs[j][i]);
 
         if (target.isZero()) {
             expressions.push_back({});
