@@ -43,10 +43,10 @@ std::vector<std::pair<size_t, size_t>> Group::getPolishCandidates(size_t slack) 
     std::vector<std::pair<size_t, size_t>> candidates;
 
     for (size_t i = 0; i < solutions.size(); i++) {
-        size_t additions = solutions[i].getAdditions();
+        size_t solutionAdditions = solutions[i].getAdditions();
 
-        if (!polished[i] && additions <= additions + slack)
-            candidates.push_back({additions, i});
+        if (!polished[i] && solutionAdditions <= additions + slack)
+            candidates.push_back({solutionAdditions, i});
     }
 
     std::sort(candidates.begin(), candidates.end());
