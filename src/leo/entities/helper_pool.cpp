@@ -20,6 +20,30 @@ size_t HelperPool::size() const {
     return vectors.size() - dimension;
 }
 
+size_t HelperPool::getDimension() const {
+    return dimension;
+}
+
+size_t HelperPool::getVectorsCount() const {
+    return vectors.size();
+}
+
+const Vector& HelperPool::getVector(size_t index) const {
+    return vectors[index];
+}
+
+const std::vector<Substitution>& HelperPool::getSubstitutions(size_t index) const {
+    return index2substitutions[index];
+}
+
+std::optional<size_t> HelperPool::find(const Vector& vector) const {
+    auto it = vector2index.find(vector.getCanonized());
+    if (it == vector2index.end())
+        return std::nullopt;
+
+    return it->second;
+}
+
 void HelperPool::reset() {
     vectors.clear();
     vectors.reserve(dimension);
@@ -84,6 +108,30 @@ void HelperPool::addSolution(const Solution& solution, double weight) {
         }
 
         addSubstitution(index, {i, j, ai, aj}, weight);
+    }
+}
+
+void HelperPool::addAllProductions() {
+    for (size_t i = 0; i < vectors.size(); i++) {
+        for (size_t j = i; j < vectors.size(); j++) {
+            for (int sb : {1, -1}) {
+                Vector vector = vectors[i].addScaled(vectors[j], sb);
+                if (vector.getSupport() < 2)
+                    continue;
+
+                Vector canonized = vector.getCanonized();
+                auto it = vector2index.find(canonized);
+                if (it == vector2index.end())
+                    continue;
+
+                size_t index = it->second;
+                if (index < dimension || index == i || index == j)
+                    continue;
+
+                int sign = vector == canonized ? 1 : -1;
+                addSubstitution(index, {i, j, sign, sign * sb}, 0.0);
+            }
+        }
     }
 }
 

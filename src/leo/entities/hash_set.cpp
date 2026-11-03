@@ -5,7 +5,7 @@ namespace leo {
 HashSet::HashSet(size_t capacity) {
     size_t size = 16;
 
-    while (size < 2 * capacity + 2)
+    while (size < 4 * capacity + 2)
         size <<= 1;
 
     table.assign(size, 0);

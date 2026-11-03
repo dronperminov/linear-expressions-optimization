@@ -6,6 +6,7 @@
 
 #include <leo/entities/solution.h>
 #include <leo/entities/substitution.h>
+#include <leo/entities/vector.h>
 
 namespace leo {
 
@@ -23,9 +24,11 @@ public:
     void setBound(size_t bound);
 
     virtual bool canStartFromSubstitutions() const;
+    virtual bool canStartFromVectors() const;
 
     virtual std::optional<size_t> solve() = 0;
     virtual std::optional<size_t> solve(const std::vector<Substitution>& substitutions);
+    virtual std::optional<size_t> solve(const std::vector<Vector>& seeds);
     virtual Solution getSolution() const = 0;
 
     virtual ~Solver() = default;

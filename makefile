@@ -20,6 +20,8 @@ LIB_SOURCES := \
     src/leo/formatters/json_solution_formatter.cpp \
     src/leo/formatters/plain_text_solution_formatter.cpp \
     src/leo/formatters/slp_solution_formatter.cpp \
+    src/leo/optimization/group.cpp \
+    src/leo/optimization/helper_exchange.cpp \
     src/leo/optimization/reducer.cpp \
     src/leo/optimization/selection/greedy_alternative_selector.cpp \
     src/leo/optimization/selection/greedy_random_selector.cpp \

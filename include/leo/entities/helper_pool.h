@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <random>
 #include <vector>
 #include <unordered_map>
@@ -34,8 +35,15 @@ public:
     bool empty() const;
     size_t size() const;
 
+    size_t getDimension() const;
+    size_t getVectorsCount() const;
+    const Vector& getVector(size_t index) const;
+    const std::vector<Substitution>& getSubstitutions(size_t index) const;
+    std::optional<size_t> find(const Vector& vector) const;
+
     void reset();
     void addSolution(const Solution& solution, double weight = 1.0);
+    void addAllProductions();
     void print() const;
 
     std::vector<Substitution> getRandomSubstitutions(std::mt19937& generator, size_t limit) const;

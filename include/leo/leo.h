@@ -52,6 +52,8 @@
 #include <leo/optimization/solvers/vector_covering/vector_covering_solver.h>
 
 // strategies
+#include <leo/optimization/group.h>
+#include <leo/optimization/helper_exchange.h>
 #include <leo/optimization/reducer.h>
 #include <leo/optimization/strategy_pool.h>
 #include <leo/optimization/strategy_presets.h>

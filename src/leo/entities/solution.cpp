@@ -1,5 +1,9 @@
 #include <leo/entities/solution.h>
 
+#include <algorithm>
+
+#include <leo/entities/vector.h>
+
 namespace leo {
 
 size_t Solution::getAdditions() const {
@@ -34,6 +38,26 @@ size_t Solution::getInversions() const {
     }
 
     return inversions;
+}
+
+uint64_t Solution::getSignature() const {
+    std::vector<Vector> vectors;
+    for (size_t i = 0; i < dimension; i++)
+        vectors.emplace_back(dimension, i);
+
+    std::vector<uint64_t> fingerprints;
+    for (const Substitution& s : substitutions) {
+        vectors.push_back(vectors[s.i] * s.ai + vectors[s.j] * s.aj);
+        fingerprints.push_back(vectors.back().getCanonized().getFingerprint());
+    }
+
+    std::sort(fingerprints.begin(), fingerprints.end());
+
+    uint64_t hash = 1469598103934665603ULL;
+    for (uint64_t f : fingerprints)
+        hash = (hash ^ f) * 1099511628211ULL;
+
+    return hash;
 }
 
 } // namepsace leo
